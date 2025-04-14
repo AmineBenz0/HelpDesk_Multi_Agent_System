@@ -10,17 +10,17 @@
 
 ## Project Structure
 
-HelpDesk_Multi_Agent_System/
-├── config/ # Configuration files
-│ ├── init.py
-│ ├── settings.py # Application settings
-│ └── credentials/ # Authentication files
-│ ├── credentials.json # Gmail API credentials
-│ ├── token.json # Gmail auth token
-│ └── groq_api_key.txt # LLM API key
+HelpDesk_Multi_Agent_System/\
+├── config/\ # Configuration files
+│ ├── init.py\
+│ ├── settings.py\ # Application settings
+│ └── credentials/\ # Authentication files
+│ ├── credentials.json\ # Gmail API credentials
+│ ├── token.json\ # Gmail auth token
+│ └── groq_api_key.txt\ # LLM API key
 │
-├── src/ # Main application code
-│ ├── core/ # Core system components
+├── src/\ # Main application code
+│ ├── core/\ # Core system components
 │ │ ├── gmail_service.py # Gmail API wrapper
 │ │ ├── llm_handler.py # LLM interface
 │ │ ├── email_processor.py # Email classification

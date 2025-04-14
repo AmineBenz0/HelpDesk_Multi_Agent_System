@@ -10,33 +10,35 @@
 
 ## Project Structure
 
-HelpDesk_Multi_Agent_System/\
-├── config/\ # Configuration files
-│ ├── init.py\
-│ ├── settings.py\ # Application settings
-│ └── credentials/\ # Authentication files
-│ ├── credentials.json\ # Gmail API credentials
-│ ├── token.json\ # Gmail auth token
-│ └── groq_api_key.txt\ # LLM API key
-│
-├── src/\ # Main application code
-│ ├── core/\ # Core system components
-│ │ ├── gmail_service.py # Gmail API wrapper
-│ │ ├── llm_handler.py # LLM interface
-│ │ ├── email_processor.py # Email classification
-│ │ └── workflow.py # Processing workflow
-│ │
-│ ├── monitoring/ # Email monitoring
-│ │ └── gmail_monitor.py # Inbox monitoring
-│ │
-│ ├── utils/ # Utilities
-│ │ ├── logger.py # Logging setup
-│ │ ├── prompts.py # LLM prompts
-│ │ └── document_parser.py # File processing
-│ │
-│ └── main.py # Entry point
-├── requirements.txt # Python dependencies
-└── README.md # This file
+## Project Structure
+
+- **config/**  
+  - `__init__.py`  
+  - `settings.py` (Application settings)  
+  - **credentials/**  
+    - `credentials.json` (Gmail API credentials)  
+    - `token.json` (Gmail auth token)  
+    - `groq_api_key.txt` (LLM API key)  
+
+- **src/**  
+  - **core/**  
+    - `gmail_service.py` (Gmail API wrapper)  
+    - `llm_handler.py` (LLM interface)  
+    - `email_processor.py` (Email classification)  
+    - `workflow.py` (Processing workflow)  
+  - **monitoring/**  
+    - `gmail_monitor.py` (Inbox monitoring)  
+  - **utils/**  
+    - `logger.py` (Logging setup)  
+    - `prompts.py` (LLM prompts)  
+    - `document_parser.py` (File processing)  
+  - `main.py` (Entry point)  
+
+- **tests/** (Unit tests)  
+- **scripts/** (Utility scripts)  
+- `requirements.txt` (Python dependencies)  
+- `README.md` (This file)  
+
 
 ## Installation
 

@@ -34,8 +34,6 @@
     - `document_parser.py` (File processing)  
   - `main.py` (Entry point)  
 
-- **tests/** (Unit tests)  
-- **scripts/** (Utility scripts)  
 - `requirements.txt` (Python dependencies)  
 - `README.md` (This file)  
 

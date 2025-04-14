@@ -11,7 +11,7 @@
 ## Project Structure
 
 HelpDesk_Multi_Agent_System/
-├── config/ # Configuration files
+├── config/ # Configuration files                                                                                                         
 │ ├── init.py
 │ ├── settings.py # Application settings
 │ └── credentials/ # Authentication files

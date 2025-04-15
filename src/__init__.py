@@ -8,7 +8,6 @@ from src import GmailService, LLMHandler
 
 from .core.gmail_service import GmailService
 from .core.llm_handler import LLMHandler
-from .core.email_processor import EmailProcessor
 from .monitoring.gmail_monitor import GmailMonitor
 
-__all__ = ['GmailService', 'LLMHandler', 'EmailProcessor', 'GmailMonitor']
+__all__ = ['GmailService', 'LLMHandler', 'GmailMonitor']

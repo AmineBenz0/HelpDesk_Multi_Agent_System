@@ -2,7 +2,9 @@
 from typing import Any, TypedDict
 from langgraph.graph import StateGraph, END
 from src.utils.logger import logger
-from src.core.email_processor import EmailProcessor
+from src.agents.classification_agent import ClassifierAgent
+from src.agents.demande_agent import DemandeAgent
+from src.agents.incident_agent import IncidentAgent
 
 class EmailState(TypedDict):
     """
@@ -19,12 +21,16 @@ class EmailState(TypedDict):
     processed: bool
     category: str
 
-def create_workflow(email_processor: EmailProcessor) -> Any:
+def create_workflow(
+        classifier_agent: Any, 
+        demande_agent: Any,
+        incident_agent: Any
+    ) -> Any:
     """
     Creates and configures the email processing workflow.
     
     Args:
-        email_processor: Initialized EmailProcessor instance
+        email_processor: Initialized ClassifierAgent instance
         
     Returns:
         Compiled LangGraph workflow ready for execution
@@ -34,16 +40,11 @@ def create_workflow(email_processor: EmailProcessor) -> Any:
     # Initialize the state graph
     workflow = StateGraph(EmailState)
     
-    # Add workflow nodes
-    workflow.add_node(
-        "classify_email", 
-        email_processor.classify_email,
-    )
-    
-    workflow.add_node(
-        "complete_processing", 
-        _mark_as_processed,
-    )
+    # Add nodes using passed agents
+    workflow.add_node("classify_email", classifier_agent.classify_email)
+    workflow.add_node("handle_demande", demande_agent.process)
+    workflow.add_node("handle_incident", incident_agent.process)
+    workflow.add_node("complete_processing", _mark_as_processed)
     
     # Define workflow edges
     workflow.add_edge(
@@ -55,6 +56,16 @@ def create_workflow(email_processor: EmailProcessor) -> Any:
         "complete_processing", 
         END,
     )
+
+    # Conditional routing
+    workflow.add_conditional_edges(
+        "classify_email",
+        _route_based_on_category,
+        {
+            "demande": "handle_demande",
+            "incident": "handle_incident"
+        }
+    )
     
     # Set entry point
     workflow.set_entry_point("classify_email")
@@ -64,6 +75,22 @@ def create_workflow(email_processor: EmailProcessor) -> Any:
     
     logger.info("Workflow compilation complete")
     return compiled_workflow
+
+def _route_based_on_category(state: EmailState) -> str:
+    """Route the email based on classification category."""
+    category = state["classification_result"].get("category", "").lower()
+    print(category)
+    print(state["classification_result"])
+    logger.debug(f"Routing email to {category} handler")
+    return "demande" if "demande" in category else "incident"
+
+def _process_demande(state: EmailState) -> EmailState:
+    result = DemandeAgent.process(state["email_data"])
+    return {**state, "demande_result": result}
+
+def _process_incident(state: EmailState) -> EmailState:
+    result = IncidentAgent.process(state["email_data"])
+    return {**state, "incident_result": result}
 
 def _mark_as_processed(state: EmailState) -> EmailState:
     """

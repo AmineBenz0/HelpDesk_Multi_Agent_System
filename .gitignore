@@ -1,0 +1,23 @@
+# Credentials
+credentials.json
+token.json
+groq_api_key.txt
+
+# Ignore all __pycache__ folders in the entire project
+__pycache__/
+
+# Ignore all .pyc files
+*.pyc
+
+# Ignore all .pyo files
+*.pyo
+
+# Ignore all .pyd files
+*.pyd
+
+# Ignore all .pyw files
+*.pyw
+
+
+
+

@@ -22,8 +22,6 @@ EMAIL_PROMPTS = {
 ### Response Format (JSON only):
 {{
     "category": "Demande|Incident",
-    "confidence": "high|medium|low",
-    "key_evidence": ["list", "of", "key", "phrases"]
 }}""",
         description="Prompt for classifying emails into categories"
     )

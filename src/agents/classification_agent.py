@@ -1,10 +1,10 @@
-# src/core/email_processor.py
+# src/core/classification_agent .py
 import json
 from typing import Dict, Any
 from src.utils.logger import logger
 from src.utils.prompts import get_email_classification_prompt
 
-class EmailProcessor:
+class ClassifierAgent:
     """Processes individual emails through classification and handling."""
     
     def __init__(self, llm_handler):
@@ -14,9 +14,10 @@ class EmailProcessor:
         """Classify an email into predefined categories."""
         logger.info("Classifying email...")
         
-        sender = email_data.get("from", "Unknown")
-        subject = email_data.get("subject", "No Subject")
-        body = email_data.get("body", "")
+        raw_email = email_data.get("email_data", {})
+        sender = raw_email.get("from", "Unknown")
+        subject = raw_email.get("subject", "No Subject")
+        body = raw_email.get("body", "")
         
         logger.debug(f"From: {sender}, Subject: {subject[:50]}...")
         
@@ -32,7 +33,7 @@ class EmailProcessor:
             content = response.content if hasattr(response, 'content') else str(response)
             content = content.replace('```json', '').replace('```', '').strip()
             
-            logger.debug(f"Raw response: {content[:200]}...")  # Log first 200 chars
+            logger.debug(f"Raw response: {content[:200]}")  # Log first 200 chars
             
             result = json.loads(content)
             

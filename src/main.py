@@ -11,10 +11,12 @@ from typing import TypedDict
 from langgraph.graph import StateGraph
 from src.core.gmail_service import GmailService
 from src.core.llm_handler import LLMHandler
-from src.core.email_processor import EmailProcessor
 from src.core.workflow import create_workflow
 from src.monitoring.gmail_monitor import GmailMonitor
 from src.utils.logger import logger
+from src.agents.classification_agent import ClassifierAgent
+from src.agents.demande_agent import DemandeAgent
+from src.agents.incident_agent import IncidentAgent
 
 def main():
     """Main entry point for the email notification system."""
@@ -24,10 +26,18 @@ def main():
         # Initialize services
         gmail_service = GmailService().service
         llm_handler = LLMHandler()
-        email_processor = EmailProcessor(llm_handler)
+
+        #Initialize Agents
+        classifier_agent = ClassifierAgent(llm_handler)
+        demande_agent = DemandeAgent(gmail_service)
+        incident_agent = IncidentAgent()
         
         # Create and run workflow
-        workflow = create_workflow(email_processor)
+        workflow = create_workflow(
+            classifier_agent=classifier_agent,
+            demande_agent=demande_agent,
+            incident_agent=incident_agent
+            )
         monitor = GmailMonitor(gmail_service, workflow)
         monitor.start_monitoring()
         

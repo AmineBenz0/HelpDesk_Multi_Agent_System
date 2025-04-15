@@ -10,20 +10,27 @@ class ClassifierAgent:
     def __init__(self, llm_handler):
         self.llm_handler = llm_handler
 
-    def classify_email(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
+    def classify_email(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Classify an email into predefined categories."""
         logger.info("Classifying email...")
         
-        raw_email = email_data.get("email_data", {})
-        sender = raw_email.get("from", "Unknown")
-        subject = raw_email.get("subject", "No Subject")
-        body = raw_email.get("body", "")
+        # Access email data from the state
+        email_data = state["email_data"]
+        sender = email_data["from"]  # Direct access since we know it exists
+        subject = email_data["subject"]
+        body = email_data["body"]
         
         logger.debug(f"From: {sender}, Subject: {subject[:50]}...")
         
         prompt = get_email_classification_prompt(sender, subject, body)
         llm_response = self.llm_handler.get_response(prompt)
-        return self._parse_response(llm_response)
+        result = self._parse_response(llm_response)
+        
+        # Update the state with the classification result
+        return {
+            **state,
+            "category": result["category"],
+        }
 
     def _parse_response(self, response: Any) -> Dict[str, Any]:
         """Parse and validate the LLM response."""

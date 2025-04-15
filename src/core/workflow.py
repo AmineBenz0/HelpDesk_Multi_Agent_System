@@ -12,12 +12,10 @@ class EmailState(TypedDict):
     
     Attributes:
         email_data: Dictionary containing email metadata and content
-        classification_result: Dictionary containing LLM classification results
         processed: Boolean indicating whether processing is complete
         category: String representing the classified category
     """
     email_data: dict
-    classification_result: dict
     processed: bool
     category: str
 
@@ -46,18 +44,7 @@ def create_workflow(
     workflow.add_node("handle_incident", incident_agent.process)
     workflow.add_node("complete_processing", _mark_as_processed)
     
-    # Define workflow edges
-    workflow.add_edge(
-        "classify_email", 
-        "complete_processing",
-    )
-    
-    workflow.add_edge(
-        "complete_processing", 
-        END,
-    )
-
-    # Conditional routing
+    # Conditional routing from classification to handlers
     workflow.add_conditional_edges(
         "classify_email",
         _route_based_on_category,
@@ -66,6 +53,13 @@ def create_workflow(
             "incident": "handle_incident"
         }
     )
+    
+    # Add edges from handlers to completion
+    workflow.add_edge("handle_demande", "complete_processing")
+    workflow.add_edge("handle_incident", "complete_processing")
+    
+    # Final edge to end
+    workflow.add_edge("complete_processing", END)
     
     # Set entry point
     workflow.set_entry_point("classify_email")
@@ -78,11 +72,9 @@ def create_workflow(
 
 def _route_based_on_category(state: EmailState) -> str:
     """Route the email based on classification category."""
-    category = state["classification_result"].get("category", "").lower()
-    print(category)
-    print(state["classification_result"])
+    category = state["category"].lower()
     logger.debug(f"Routing email to {category} handler")
-    return "demande" if "demande" in category else "incident"
+    return category
 
 def _process_demande(state: EmailState) -> EmailState:
     result = DemandeAgent.process(state["email_data"])

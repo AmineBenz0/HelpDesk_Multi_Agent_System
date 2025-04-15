@@ -9,9 +9,11 @@ class DemandeAgent:
     def __init__(self, gmail_service):
         self.gmail_service = gmail_service
     
-    def process(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process demande by sending acknowledgment email"""
         logger.info("Processing demande...")
+        
+        email_data = state["email_data"]
         
         # Create response email
         response_text = self._generate_response(email_data)
@@ -28,10 +30,10 @@ class DemandeAgent:
                 body={"raw": message}
             ).execute()
             logger.info(f"Demande acknowledgment sent: {sent_message['id']}")
-            return {"status": "acknowledged", "message_id": sent_message["id"]}
+            return {**state, "status": "acknowledged", "message_id": sent_message["id"]}
         except Exception as e:
             logger.error(f"Failed to send demande acknowledgment: {str(e)}")
-            return {"error": str(e)}
+            return {**state, "error": str(e)}
 
     def _generate_response(self, email_data: Dict[str, Any]) -> str:
         """Generate acknowledgment email text"""
@@ -45,13 +47,13 @@ class DemandeAgent:
         Votre demande a été enregistrée sous le numéro de référence : {email_data['message_id']}
         
         Cordialement,
-        L’équipe du support technique
+        L'équipe du support technique
         """
 
     def _create_message(self, to: str, subject: str, message_text: str) -> str:
         """Create MIME message for Gmail API"""
         message = MIMEText(message_text)
         message["to"] = to
-        message["from"] = settings.HELPDESK_EMAIL
+        message["from"] = settings.AUTHORIZED_EMAILS[0]
         message["subject"] = subject
         return base64.urlsafe_b64encode(message.as_bytes()).decode()

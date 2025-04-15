@@ -3,21 +3,12 @@ credentials.json
 token.json
 groq_api_key.txt
 
-# Ignore all __pycache__ folders in the entire project
+# Python cache files and directories
 __pycache__/
-
-# Ignore all .pyc files
+*/__pycache__/
+**/__pycache__/
 *.pyc
-
-# Ignore all .pyo files
-*.pyo
-
-# Ignore all .pyd files
-*.pyd
-
-# Ignore all .pyw files
-*.pyw
-
-
+*/*.pyc
+**/*.pyc
 
 

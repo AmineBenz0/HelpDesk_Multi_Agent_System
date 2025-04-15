@@ -169,19 +169,28 @@ class GmailMonitor:
         try:
             initial_state = {
                 "email_data": thread_data,
-                "classification_result": {},
                 "processed": False,
                 "category": ""
             }
-            
+
             logger.info("Executing workflow...")
             final_state = self.workflow.invoke(initial_state)
             
             logger.info(f"Workflow completed. Final state: {final_state}")
             self.last_processed_thread = thread_id
             
+        except KeyError as e:
+            logger.error(f"Missing required key in state: {str(e)}")
+            logger.error(f"Thread data: {thread_data}")
+            logger.error(f"Initial state: {initial_state}")
         except Exception as e:
-            logger.error(f"Error processing thread: {str(e)}")
+            logger.error(f"Error processing thread {thread_id}: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Thread data: {thread_data}")
+            logger.error(f"Initial state: {initial_state}")
+            if hasattr(e, '__traceback__'):
+                import traceback
+                logger.error(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
         finally:
             self.processing_flag = False
     

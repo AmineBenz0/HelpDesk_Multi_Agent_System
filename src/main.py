@@ -30,7 +30,7 @@ def main():
         #Initialize Agents
         classifier_agent = ClassifierAgent(llm_handler)
         demande_agent = DemandeAgent(gmail_service)
-        incident_agent = IncidentAgent()
+        incident_agent = IncidentAgent(llm_handler)
         
         # Create and run workflow
         workflow = create_workflow(

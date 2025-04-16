@@ -10,6 +10,7 @@ if PROJECT_ROOT not in sys.path:
 from typing import TypedDict
 from langgraph.graph import StateGraph
 from src.core.gmail_service import GmailService
+from src.core.gmail_sender import GmailSender
 from src.core.llm_handler import LLMHandler
 from src.core.workflow import create_workflow
 from src.monitoring.gmail_monitor import GmailMonitor
@@ -17,6 +18,7 @@ from src.utils.logger import logger
 from src.agents.classification_agent import ClassifierAgent
 from src.agents.demande_agent import DemandeAgent
 from src.agents.incident_agent import IncidentAgent
+from src.core.ticket_management import TicketManager
 
 def main():
     """Main entry point for the email notification system."""
@@ -24,13 +26,15 @@ def main():
     
     try:
         # Initialize services
-        gmail_service = GmailService().service
+        gmail_service = GmailService()  # Create GmailService instance
+        gmail_sender = GmailSender(gmail_service.service)  # Pass the service instance
         llm_handler = LLMHandler()
+        ticket_manager = TicketManager()
 
         #Initialize Agents
         classifier_agent = ClassifierAgent(llm_handler)
-        demande_agent = DemandeAgent(gmail_service)
-        incident_agent = IncidentAgent(llm_handler)
+        demande_agent = DemandeAgent(gmail_sender)  # Pass the GmailSender instance
+        incident_agent = IncidentAgent(llm_handler, ticket_manager, gmail_sender)  # Pass the GmailSender instance
         
         # Create and run workflow
         workflow = create_workflow(
@@ -38,7 +42,7 @@ def main():
             demande_agent=demande_agent,
             incident_agent=incident_agent
             )
-        monitor = GmailMonitor(gmail_service, workflow)
+        monitor = GmailMonitor(gmail_service.service, workflow)  # Pass the service instance
         monitor.start_monitoring()
         
     except Exception as e:

@@ -87,6 +87,84 @@ EMAIL_PROMPTS = {
                         ]
                     }}""",
         description="Prompt for classifying incidents into subcategories"
+    ),
+    "user_info_extraction": PromptTemplate(
+        name="user_info_extraction",
+        template="""Tu es un assistant intelligent expert en extraction d'informations à partir d'emails.
+
+                    **Objectif** : Extraire les informations de l'utilisateur à partir de l'email.
+
+                    **Informations à extraire** :
+                    1. Nom complet de l'utilisateur
+                    2. Email de l'utilisateur
+                    3. Localisation physique de l'utilisateur
+                    4. Description détaillée du problème
+
+                    **Contexte** :
+                    - L'email provient d'un système de support technique
+                    - Les informations peuvent être explicites ou implicites dans le contenu
+                    - Utilise le contexte et les indices pour déduire les informations manquantes
+                    - Pour la localisation, cherche des indices comme :
+                      * Mentions de bureaux spécifiques
+                      * Mentions de villes ou régions
+                      * Contexte de l'organisation
+
+                    ---
+
+                    ### Détails de l'email :
+                    **Expéditeur** : {sender}  
+                    **Objet** : "{subject}"  
+                    **Contenu** :  
+                    {body}
+
+                    ---
+
+                    ### Format attendu (strictement JSON) :
+                    Ne réponds que par un objet JSON valide contenant les informations extraites. Aucune explication ni texte supplémentaire.
+
+                    ```json
+                    {{
+                        "user_info": {{
+                            "name": "Nom complet de l'utilisateur",
+                            "email": "Email de l'utilisateur",
+                            "location": "Localisation physique de l'utilisateur"
+                        }},
+                        "description": "Description détaillée du problème"
+                    }}""",
+        description="Prompt for extracting user information from emails"
+    ),
+    "follow_up_questions": PromptTemplate(
+        name="follow_up_questions",
+        template="""Tu es un assistant intelligent expert en gestion des tickets de support.
+
+                    **Objectif** : Générer des questions de suivi appropriées pour obtenir les informations manquantes.
+
+                    **Contexte** :
+                    - Un ticket a été créé avec certaines informations manquantes
+                    - Il faut envoyer un email de suivi pour obtenir ces informations
+                    - Les questions doivent être claires, professionnelles et spécifiques
+                    - Le ton doit être courtois et professionnel
+
+                    **Informations manquantes** :
+                    {missing_fields}
+
+                    **Format de l'email** :
+                    - Commencer par une salutation professionnelle
+                    - Expliquer brièvement pourquoi nous avons besoin de ces informations
+                    - Poser les questions de manière claire et structurée
+                    - Terminer par une formule de politesse
+
+                    ---
+
+                    ### Format attendu (strictement JSON) :
+                    Ne réponds que par un objet JSON valide contenant le sujet et le contenu de l'email de suivi.
+
+                    ```json
+                    {{
+                        "subject": "Sujet de l'email de suivi",
+                        "body": "Contenu de l'email de suivi avec les questions"
+                    }}""",
+        description="Prompt for generating follow-up questions for missing information"
     )
 }
 
@@ -104,6 +182,20 @@ def get_incident_subcategory_prompt(sender: str, subject: str, body: str) -> str
         sender=sender,
         subject=subject,
         body=body
+    )
+
+def get_user_info_extraction_prompt(sender: str, subject: str, body: str) -> str:
+    """Get formatted user information extraction prompt."""
+    return EMAIL_PROMPTS["user_info_extraction"].template.format(
+        sender=sender,
+        subject=subject,
+        body=body
+    )
+
+def get_follow_up_questions_prompt(missing_fields: list) -> str:
+    """Get formatted follow-up questions prompt."""
+    return EMAIL_PROMPTS["follow_up_questions"].template.format(
+        missing_fields="\n".join([f"- {field}" for field in missing_fields])
     )
 
 def get_prompt(name: str, **kwargs) -> str:

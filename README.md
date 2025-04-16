@@ -49,7 +49,7 @@ Edit `config/settings.py` to customize system behavior:
 
 ```python
 # Email monitoring
-POLL_INTERVAL_SECONDS = 60  # Check for new emails every 60 seconds
+POLL_INTERVAL_SECONDS = 10  # Check for new emails every 10 seconds
 SPECIFIC_EMAIL = "example@gmail.com"  # Monitor specific email address
 
 # LLM Settings

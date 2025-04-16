@@ -38,16 +38,15 @@ class DemandeAgent:
     def _generate_response(self, email_data: Dict[str, Any]) -> str:
         """Generate acknowledgment email text"""
         return f"""
-        Cher/Chère {email_data['from'].split('@')[0]},
         
-        Merci pour votre demande. Nous avons bien reçu votre requête concernant :
-        "{email_data['subject']}"
+Merci pour votre demande. Nous avons bien reçu votre requête concernant :
+    "{email_data['subject']}"
         
-        Notre équipe d'assistance va l'examiner et vous répondra dans un délai de 24 heures.
-        Votre demande a été enregistrée sous le numéro de référence : {email_data['message_id']}
-        
-        Cordialement,
-        L'équipe du support technique
+Notre équipe d'assistance va l'examiner et vous répondra dans un délai de 24 heures.
+Votre demande a été enregistrée sous le numéro de référence : {email_data['message_id']}
+
+    Cordialement,
+    L'équipe du support technique
         """
 
     def _create_message(self, to: str, subject: str, message_text: str) -> str:

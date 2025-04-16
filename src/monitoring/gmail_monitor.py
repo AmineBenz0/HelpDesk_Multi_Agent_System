@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 class GmailMonitor:
     """Monitors Gmail inbox for new emails and processes them."""
     
-    def __init__(self, service: Any, workflow: Any, authorized_emails: Optional[List[str]] = None, poll_interval: int = 60):
+    def __init__(self, service: Any, workflow: Any, authorized_emails: Optional[List[str]] = None, poll_interval: int = settings.POLL_INTERVAL_SECONDS):
         logger.info("Initializing GmailMonitor...")
         self.service = service
         self.workflow = workflow

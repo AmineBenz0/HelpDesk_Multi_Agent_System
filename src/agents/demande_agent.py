@@ -6,8 +6,8 @@ from src.utils.logger import logger
 from config.settings import settings
 
 class DemandeAgent:
-    def __init__(self, gmail_service):
-        self.gmail_service = gmail_service
+    def __init__(self, gmail_sender):
+        self.gmail_sender = gmail_sender
     
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process demande by sending acknowledgment email"""
@@ -17,20 +17,16 @@ class DemandeAgent:
         
         # Create response email
         response_text = self._generate_response(email_data)
-        message = self._create_message(
-            to=email_data["from"],
-            subject=f"Re: {email_data['subject']}",
-            message_text=response_text
-        )
         
         # Send email
         try:
-            sent_message = self.gmail_service.users().messages().send(
-                userId="me",
-                body={"raw": message}
-            ).execute()
-            logger.info(f"Demande acknowledgment sent: {sent_message['id']}")
-            return {**state, "status": "acknowledged", "message_id": sent_message["id"]}
+            success = self.gmail_sender.send_message(email_data["from"], email_data["subject"], response_text)
+            if success:
+                logger.info("Demande acknowledgment sent successfully")
+                return {**state, "status": "acknowledged"}
+            else:
+                logger.error("Failed to send demande acknowledgment")
+                return {**state, "error": "Failed to send acknowledgment email"}
         except Exception as e:
             logger.error(f"Failed to send demande acknowledgment: {str(e)}")
             return {**state, "error": str(e)}
@@ -48,11 +44,3 @@ Votre demande a été enregistrée sous le numéro de référence : {email_data[
     Cordialement,
     L'équipe du support technique
         """
-
-    def _create_message(self, to: str, subject: str, message_text: str) -> str:
-        """Create MIME message for Gmail API"""
-        message = MIMEText(message_text)
-        message["to"] = to
-        message["from"] = settings.AUTHORIZED_EMAILS[0]
-        message["subject"] = subject
-        return base64.urlsafe_b64encode(message.as_bytes()).decode()

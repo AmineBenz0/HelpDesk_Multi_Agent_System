@@ -25,15 +25,38 @@ class FollowUpManager:
         
         # Check for low confidence subcategories
         if ticket.subcategories:
-            low_confidence = False
-            for subcategory in ticket.subcategories:
-                if isinstance(subcategory, dict) and "confidence" in subcategory:
-                    if float(subcategory["confidence"]) < 0.8:
-                        low_confidence = True
-                        break
+            # Sort subcategories by confidence in descending order
+            sorted_subcategories = sorted(
+                [sc for sc in ticket.subcategories if isinstance(sc, dict) and "confidence" in sc],
+                key=lambda x: float(x["confidence"]),
+                reverse=True
+            )
             
-            if low_confidence:
-                missing_fields.append("Département")
+            # Only check confidence difference if we have at least 2 subcategories
+            if len(sorted_subcategories) >= 2:
+                highest_confidence = float(sorted_subcategories[0]["confidence"])
+                second_highest_confidence = float(sorted_subcategories[1]["confidence"])
+                confidence_diff = highest_confidence - second_highest_confidence
+                
+                # Only flag as missing if confidence difference is less than 0.2
+                if confidence_diff < 0.2:
+                    missing_fields.append("Département")
+                    logger.info(f"Confidence difference ({confidence_diff:.2f}) is less than 0.2, requesting clarification")
+                else:
+                    # Update ticket to keep only the highest confidence subcategory
+                    try:
+                        from src.core.ticket_management import TicketManager
+                        ticket_manager = TicketManager()
+                        success = ticket_manager.update_ticket_subcategories(
+                            ticket.ticket_id,
+                            [sorted_subcategories[0]]  # Keep only the highest confidence subcategory
+                        )
+                        if success:
+                            logger.info(f"Updated ticket {ticket.ticket_id} to keep only highest confidence subcategory (diff: {confidence_diff:.2f})")
+                        else:
+                            logger.error(f"Failed to update ticket {ticket.ticket_id} subcategories")
+                    except Exception as e:
+                        logger.error(f"Error updating ticket subcategories: {str(e)}")
         
         if not ticket.submitted_by.location:
             missing_fields.append("Localisation")
@@ -52,29 +75,22 @@ class FollowUpManager:
             llm_response = self.llm_handler.get_response(prompt)
             result = self._parse_response(llm_response)
             
-            # Add ticket reference and department information to the email
-            subcategories_text = ""
-            if ticket.subcategories:
-                subcategories_text = "\n".join([
-                    f"- {sc['category']} (Confiance: {float(sc['confidence']):.2f})"
-                    for sc in ticket.subcategories
-                    if isinstance(sc, dict) and "category" in sc and "confidence" in sc
-                ])
+            # Format the email body
+            email_body = f"""Bonjour {ticket.submitted_by.name},
+
+{result['body']}
+
+Pour votre référence :
+- Identifiant du ticket : {ticket.ticket_id}
+- Catégories identifiées : {', '.join([sc['category'] for sc in ticket.subcategories if isinstance(sc, dict) and 'category' in sc])}
+
+Cordialement,
+L'équipe du support technique"""
             
-            result["body"] = f"""
-                            Bonjour {ticket.submitted_by.name},
-                            
-                            {result['body']}
-                            
-                            Pour votre référence :
-                            - Identifiant du ticket : {ticket.ticket_id}
-                            - Catégories identifiées :
-                            {subcategories_text}
-                            
-                            Cordialement,
-                            L'équipe du support technique
-                            """
-            return result
+            return {
+                "subject": result["subject"],
+                "body": email_body
+            }
         except Exception as e:
             logger.error(f"Failed to generate follow-up email: {str(e)}")
             raise

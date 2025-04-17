@@ -26,15 +26,15 @@ def main():
     
     try:
         # Initialize services
-        gmail_service = GmailService()  # Create GmailService instance
-        gmail_sender = GmailSender(gmail_service.service)  # Pass the service instance
+        gmail_service = GmailService()
+        gmail_sender = GmailSender(gmail_service.service)
         llm_handler = LLMHandler()
         ticket_manager = TicketManager()
 
         #Initialize Agents
         classifier_agent = ClassifierAgent(llm_handler)
-        demande_agent = DemandeAgent(gmail_sender)  # Pass the GmailSender instance
-        incident_agent = IncidentAgent(llm_handler, ticket_manager, gmail_sender)  # Pass the GmailSender instance
+        demande_agent = DemandeAgent(gmail_sender)
+        incident_agent = IncidentAgent(llm_handler, ticket_manager, gmail_sender)
         
         # Create and run workflow
         workflow = create_workflow(
@@ -42,7 +42,7 @@ def main():
             demande_agent=demande_agent,
             incident_agent=incident_agent
             )
-        monitor = GmailMonitor(gmail_service.service, workflow)  # Pass the service instance
+        monitor = GmailMonitor(gmail_service.service, workflow)
         monitor.start_monitoring()
         
     except Exception as e:

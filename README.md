@@ -1,6 +1,6 @@
 # HelpDesk Multi-Agent System
 
-A sophisticated multi-agent system for automated email processing and helpdesk management, powered by AI and machine learning.
+A sophisticated multi-agent system for automated email processing and helpdesk management, powered by AI.
 
 ## 🚀 Features
 

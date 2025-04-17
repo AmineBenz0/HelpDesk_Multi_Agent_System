@@ -68,9 +68,24 @@ class Ticket:
         data['date_submitted'] = datetime.fromisoformat(data['date_submitted'])
         if data.get('date_resolved'):
             data['date_resolved'] = datetime.fromisoformat(data['date_resolved'])
+        
+        # Handle priority encoding
+        if data.get('priority'):
+            priority_value = data['priority']
+            # Handle common encoding issues
+            if isinstance(priority_value, str):
+                priority_value = priority_value.replace('Ã‰', 'É').replace('Ã©', 'é')
+                if priority_value == 'Élevée':
+                    data['priority'] = Priority.ELEVEE
+                elif priority_value == 'Critique':
+                    data['priority'] = Priority.CRITIQUE
+                else:
+                    data['priority'] = None
+            else:
+                data['priority'] = None
+        
         # Convert string values back to enums
         data['ticket_type'] = TicketType(data['ticket_type'])
-        data['priority'] = Priority(data['priority']) if data.get('priority') else None
         data['status'] = Status(data['status'])
         return cls(**data)
 
@@ -120,7 +135,7 @@ class TicketManager:
                                 logger.warning(f"Empty ticket file found: {ticket_file}")
                                 continue
                                 
-                            with open(ticket_file, 'r') as f:
+                            with open(ticket_file, 'r', encoding='utf-8') as f:
                                 ticket_data = json.load(f)
                                 if not ticket_data:  # Check if JSON is empty
                                     logger.warning(f"Empty JSON in ticket file: {ticket_file}")
@@ -145,7 +160,7 @@ class TicketManager:
         """Save a ticket to the filesystem."""
         ticket_path = self._get_ticket_path(ticket.ticket_id)
         try:
-            with open(ticket_path, 'w') as f:
+            with open(ticket_path, 'w', encoding='utf-8') as f:
                 json.dump(ticket.to_dict(), f, indent=2, ensure_ascii=False)
             logger.debug(f"Saved ticket {ticket.ticket_id} to {ticket_path}")
         except Exception as e:
@@ -241,3 +256,26 @@ class TicketManager:
         return [ticket for ticket in self.tickets.values() 
                 if ticket.subcategories and 
                 any(sc["category"] == subcategory for sc in ticket.subcategories)]
+
+    def update_ticket_subcategories(self, ticket_id: str, subcategories: List[dict]) -> bool:
+        """Update the subcategories of a ticket.
+        
+        Args:
+            ticket_id: The ID of the ticket to update
+            subcategories: New list of subcategories
+            
+        Returns:
+            bool: True if update was successful, False otherwise
+        """
+        if ticket_id not in self.tickets:
+            logger.error(f"Ticket {ticket_id} not found")
+            return False
+            
+        try:
+            self.tickets[ticket_id].subcategories = subcategories
+            self._save_ticket(self.tickets[ticket_id])
+            logger.info(f"Updated subcategories for ticket {ticket_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update subcategories for ticket {ticket_id}: {str(e)}")
+            return False

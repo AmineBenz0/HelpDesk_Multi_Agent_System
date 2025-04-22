@@ -195,6 +195,15 @@ class TicketManager:
                                     logger.warning(f"Empty JSON in ticket file: {ticket_file}")
                                     continue
                                     
+                                # Convert submitted_by dictionary back to User object
+                                if 'submitted_by' in ticket_data:
+                                    user_data = ticket_data['submitted_by']
+                                    ticket_data['submitted_by'] = User(
+                                        name=user_data['name'],
+                                        email=user_data['email'],
+                                        location=user_data['location']
+                                    )
+                                    
                                 ticket = Ticket.from_dict(ticket_data)
                                 self.tickets[ticket.ticket_id] = ticket
                                 # Update counter to avoid ID conflicts
@@ -333,3 +342,11 @@ class TicketManager:
         except Exception as e:
             logger.error(f"Failed to update subcategories for ticket {ticket_id}: {str(e)}")
             return False
+
+    def get_all_tickets(self) -> Dict[str, Ticket]:
+        """Get all tickets from the manager.
+        
+        Returns:
+            Dict[str, Ticket]: Dictionary of all tickets with ticket IDs as keys
+        """
+        return self.tickets

@@ -75,9 +75,10 @@ class IncidentAgent:
                 # Set follow-up timestamp and timeout
                 ticket.set_follow_up_sent()
                 ticket.set_response_timeout()
+                
                 self.ticket_manager._save_ticket(ticket)
                 
-                logger.info(f"Follow-up email sent for ticket {ticket.ticket_id}")
+                logger.info(f"Follow-up email sent for ticket {ticket.ticket_id} and status changed to In Progress")
                 return {
                     **state,
                     "status": "incident_escalated_with_follow_up",

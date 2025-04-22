@@ -182,6 +182,12 @@ Système de gestion des tickets
             )
             
             if success:
+                # Update ticket status to "In Progress" since we're actively working on it
+                if ticket.status == Status.OPEN:
+                    self.ticket_manager.update_status(ticket.ticket_id, Status.IN_PROGRESS)
+                    ticket.add_note("Status changed to In Progress: Follow-up email sent for missing information")
+                    logger.info(f"Updated ticket {ticket.ticket_id} status to In Progress")
+                
                 logger.info(f"Follow-up email sent successfully for ticket {ticket.ticket_id}")
                 return True
             else:

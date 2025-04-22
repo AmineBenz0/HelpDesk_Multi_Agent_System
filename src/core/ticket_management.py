@@ -1,6 +1,6 @@
-from datetime import datetime
-from typing import Optional, List
-from dataclasses import dataclass, asdict
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Any
+from dataclasses import dataclass, asdict, field
 from enum import Enum
 import json
 import os
@@ -8,9 +8,9 @@ from pathlib import Path
 from src.utils.logger import logger
 
 class TicketType(Enum):
+    DEMANDE = "Demande"
     INCIDENT = "Incident"
     SERVICE_REQUEST = "Service Request"
-    OTHER = "Other"
 
 class Priority(Enum):
     ELEVEE = "Élevée"
@@ -22,6 +22,7 @@ class Status(Enum):
     ON_HOLD = "On Hold"
     RESOLVED = "Resolved"
     CLOSED = "Closed"
+    ESCALATED = "Escalated"
 
 @dataclass
 class User:
@@ -32,6 +33,7 @@ class User:
 @dataclass
 class SupportAgent:
     name: str
+    email: str
     team: str
 
 @dataclass
@@ -40,13 +42,17 @@ class Ticket:
     submitted_by: User
     date_submitted: datetime
     ticket_type: TicketType
-    description: str
-    priority: Optional[Priority] = None
-    assigned_to: Optional[SupportAgent] = None
+    priority: Priority
     status: Status = Status.OPEN
-    resolution_notes: Optional[str] = None
+    description: str = ""
+    subcategories: List[Dict[str, Any]] = field(default_factory=list)
+    assigned_to: Optional[SupportAgent] = None
     date_resolved: Optional[datetime] = None
-    subcategories: Optional[List[dict]] = None
+    resolution_notes: Optional[str] = None
+    follow_up_sent_at: Optional[datetime] = None
+    last_reminder_sent_at: Optional[datetime] = None
+    response_timeout: Optional[datetime] = None
+    notes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert ticket to dictionary for JSON serialization."""
@@ -55,9 +61,15 @@ class Ticket:
         data['date_submitted'] = self.date_submitted.isoformat()
         if self.date_resolved:
             data['date_resolved'] = self.date_resolved.isoformat()
+        if self.follow_up_sent_at:
+            data['follow_up_sent_at'] = self.follow_up_sent_at.isoformat()
+        if self.last_reminder_sent_at:
+            data['last_reminder_sent_at'] = self.last_reminder_sent_at.isoformat()
+        if self.response_timeout:
+            data['response_timeout'] = self.response_timeout.isoformat()
         # Convert enums to their values
         data['ticket_type'] = self.ticket_type.value
-        data['priority'] = self.priority.value if self.priority else None
+        data['priority'] = self.priority.value
         data['status'] = self.status.value
         return data
 
@@ -68,6 +80,12 @@ class Ticket:
         data['date_submitted'] = datetime.fromisoformat(data['date_submitted'])
         if data.get('date_resolved'):
             data['date_resolved'] = datetime.fromisoformat(data['date_resolved'])
+        if data.get('follow_up_sent_at'):
+            data['follow_up_sent_at'] = datetime.fromisoformat(data['follow_up_sent_at'])
+        if data.get('last_reminder_sent_at'):
+            data['last_reminder_sent_at'] = datetime.fromisoformat(data['last_reminder_sent_at'])
+        if data.get('response_timeout'):
+            data['response_timeout'] = datetime.fromisoformat(data['response_timeout'])
         
         # Handle priority encoding
         if data.get('priority'):
@@ -88,6 +106,42 @@ class Ticket:
         data['ticket_type'] = TicketType(data['ticket_type'])
         data['status'] = Status(data['status'])
         return cls(**data)
+
+    def add_note(self, note: str) -> None:
+        """Add a note to the ticket."""
+        self.notes.append(f"{datetime.now().isoformat()}: {note}")
+        if not self.resolution_notes:
+            self.resolution_notes = note
+        else:
+            self.resolution_notes += f"\n{note}"
+
+    def set_follow_up_sent(self) -> None:
+        """Mark that a follow-up email was sent."""
+        self.follow_up_sent_at = datetime.now()
+
+    def set_reminder_sent(self) -> None:
+        """Mark that a reminder email was sent."""
+        self.last_reminder_sent_at = datetime.now()
+
+    def set_response_timeout(self, timeout_hours: int = 24) -> None:
+        """Set the response timeout for the ticket."""
+        self.response_timeout = datetime.now() + timedelta(hours=timeout_hours)
+
+    def has_timed_out(self) -> bool:
+        """Check if the ticket has timed out waiting for response."""
+        if not self.response_timeout:
+            return False
+        return datetime.now() > self.response_timeout
+
+    def needs_reminder(self, reminder_interval_hours: int = 6) -> bool:
+        """Check if the ticket needs a reminder."""
+        if not self.follow_up_sent_at:
+            return False
+        if self.last_reminder_sent_at:
+            time_since_last_reminder = datetime.now() - self.last_reminder_sent_at
+            return time_since_last_reminder.total_seconds() >= reminder_interval_hours * 3600
+        time_since_follow_up = datetime.now() - self.follow_up_sent_at
+        return time_since_follow_up.total_seconds() >= reminder_interval_hours * 3600
 
 class TicketManager:
     def __init__(self, base_dir: str = "tickets"):

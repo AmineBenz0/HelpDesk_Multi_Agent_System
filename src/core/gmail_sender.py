@@ -20,13 +20,15 @@ class GmailSender:
         # Debug service attributes
         logger.debug(f"Service attributes: {dir(self.service)}")
 
-    def create_message(self, to: str, subject: str, message_text: str) -> dict:
+    def create_message(self, to: str, subject: str, message_text: str, thread_id: Optional[str] = None, message_id: Optional[str] = None) -> dict:
         """Create a message for an email.
         
         Args:
             to: Recipient email address
             subject: Email subject
             message_text: Email body text
+            thread_id: Optional thread ID to reply to
+            message_id: Optional message ID to reply to
             
         Returns:
             dict: A message object ready to be sent
@@ -35,6 +37,12 @@ class GmailSender:
         message = MIMEMultipart()
         message['to'] = to
         message['subject'] = subject
+        
+        # Add thread headers if replying
+        if thread_id and message_id:
+            message['In-Reply-To'] = message_id
+            message['References'] = message_id
+            logger.debug(f"Setting up reply to message {message_id} in thread {thread_id}")
         
         # Create the body of the message
         msg = MIMEText(message_text, 'plain', 'utf-8')
@@ -45,40 +53,29 @@ class GmailSender:
         logger.debug("Message created and encoded successfully")
         return {'raw': raw_message}
 
-    def send_message(self, to: str, subject: str, message_text: str) -> bool:
+    def send_message(self, to: str, subject: str, message_text: str, thread_id: Optional[str] = None, message_id: Optional[str] = None) -> bool:
         """Send an email message.
         
         Args:
             to: Recipient email address
             subject: Email subject
             message_text: Email body text
+            thread_id: Optional thread ID to reply to
+            message_id: Optional message ID to reply to
             
         Returns:
             bool: True if message was sent successfully, False otherwise
         """
         try:
             logger.debug("Starting email send process...")
-            logger.debug(f"Service object type: {type(self.service)}")
-            logger.debug(f"Service object: {self.service}")
             
             # Create the message
-            message = self.create_message(to, subject, message_text)
+            message = self.create_message(to, subject, message_text, thread_id, message_id)
             logger.debug("Message created successfully")
-            
-            # Debug service chain
-            logger.debug("Attempting to access service.users()...")
-            users = self.service.users()
-            logger.debug(f"Users object type: {type(users)}")
-            logger.debug(f"Users object: {users}")
-            
-            logger.debug("Attempting to access users.messages()...")
-            messages = users.messages()
-            logger.debug(f"Messages object type: {type(messages)}")
-            logger.debug(f"Messages object: {messages}")
             
             # Send the message using the Gmail API
             logger.debug("Attempting to send message...")
-            sent_message = messages.send(
+            sent_message = self.service.users().messages().send(
                 userId='me',
                 body=message
             ).execute()
@@ -88,6 +85,4 @@ class GmailSender:
         except Exception as e:
             logger.error(f"Failed to send email: {str(e)}")
             logger.error(f"Error type: {type(e).__name__}")
-            logger.error(f"Service object type at error: {type(self.service)}")
-            logger.error(f"Service object at error: {self.service}")
             return False 

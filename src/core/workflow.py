@@ -14,10 +14,18 @@ class EmailState(TypedDict):
         email_data: Dictionary containing email metadata and content
         processed: Boolean indicating whether processing is complete
         category: String representing the classified category
+        status: String representing the current processing status
+        ticket_id: String representing the ticket ID if created
+        missing_fields: List of missing fields if follow-up needed
+        follow_up_sent_at: Timestamp when follow-up was sent
     """
     email_data: dict
     processed: bool
     category: str
+    status: str
+    ticket_id: str
+    missing_fields: list
+    follow_up_sent_at: str
 
 def create_workflow(
         classifier_agent: Any, 
@@ -56,7 +64,16 @@ def create_workflow(
     
     # Add edges from handlers to completion
     workflow.add_edge("handle_demande", "complete_processing")
-    workflow.add_edge("handle_incident", "complete_processing")
+    
+    # For incidents, check if follow-up is needed
+    workflow.add_conditional_edges(
+        "handle_incident",
+        _check_incident_status,
+        {
+            "incident_escalated": "complete_processing",
+            "incident_escalated_with_follow_up": "complete_processing"
+        }
+    )
     
     # Final edge to end
     workflow.add_edge("complete_processing", END)
@@ -76,13 +93,11 @@ def _route_based_on_category(state: EmailState) -> str:
     logger.debug(f"Routing email to {category} handler")
     return category
 
-def _process_demande(state: EmailState) -> EmailState:
-    result = DemandeAgent.process(state["email_data"])
-    return {**state, "demande_result": result}
-
-def _process_incident(state: EmailState) -> EmailState:
-    result = IncidentAgent.process(state["email_data"])
-    return {**state, "incident_result": result}
+def _check_incident_status(state: EmailState) -> str:
+    """Check the status of incident processing."""
+    status = state.get("status", "")
+    logger.debug(f"Checking incident status: {status}")
+    return status
 
 def _mark_as_processed(state: EmailState) -> EmailState:
     """

@@ -100,14 +100,15 @@ EMAIL_PROMPTS = {
                     3. Localisation physique de l'utilisateur
                     4. Description détaillée du problème
 
-                    **Contexte** :
-                    - L'email provient d'un système de support technique
-                    - Les informations peuvent être explicites ou implicites dans le contenu
-                    - Utilise le contexte et les indices pour déduire les informations manquantes
-                    - Pour la localisation, cherche des indices comme :
-                      * Mentions de bureaux spécifiques
-                      * Mentions de villes ou régions
-                      * Contexte de l'organisation
+                    **Règles importantes** :
+                    - N'extrais que les informations explicitement mentionnées dans l'email
+                    - Ne fais pas de déductions ou d'inférences
+                    - Si une information n'est pas explicitement mentionnée, laisse le champ vide ("")
+                    - Pour la localisation, n'accepte QUE :
+                      * Noms de gares ferroviaires (ex: "Gare Casa Voyageurs", "Gare Rabat Ville")
+                      * Noms de villes (ex: "Rabat", "Casablanca")
+                    - Ne crée pas de localisations génériques ou non spécifiques
+                    - Si la localisation n'est pas explicitement mentionnée comme une gare ou une ville, laisse le champ vide
 
                     ---
 

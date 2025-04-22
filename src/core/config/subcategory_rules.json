@@ -1,0 +1,65 @@
+{
+    "GARES": [
+      {
+        "description": "Coupure électrique toutes les gares (Grandes, moyennes et petites)",
+        "critical_condition": "Coupure électrique toutes les gares (Grandes, moyennes et petites) : Si la vente est impactée",
+        "elevated_condition": "Coupure électrique toutes les gares (Grandes, moyennes et petites) : Si la vente n'est pas impactée",
+        "team": "FM GARES"
+      },
+      {
+        "description": "Fibre optique : Si la vente au niveau des gares est impactée ou le back up inwi est non opérationnel",
+        "critical_condition": "Fibre optique : Si la vente au niveau des gares est impactée ou le back up inwi est non opérationnel",
+        "elevated_condition": "Fibre optique : Si la vente au niveau des gares n'est pas impactée ou le back up inwi est opérationnel",
+        "team": "PC TELECOM"
+      },
+      {
+        "description": "Défaillance réseau : Si les gares sont impactées et le back up inwi est non opérationnel",
+        "critical_condition": "Défaillance réseau : Si les gares sont impactées et le back up inwi est non opérationnel",
+        "elevated_condition": "Défaillance réseau : Si les gares ne sont pas impactées ou le back up inwi est opérationnel",
+        "team": "PC TELECOM"
+      },
+      {
+        "description": "Application de vente SIV est hors service",
+        "critical_condition": "Application de vente SIV est hors service",
+        "elevated_condition": "4 grandes gares réclament les lenteurs SIV",
+        "team": "SCV"
+      },
+      {
+        "description": "Poste (s) guichet (s) HS (si la gare dispose d'un seul poste) ou > 50%.",
+        "critical_condition": "Poste (s) guichet (s) HS (si la gare dispose d'un seul poste) ou > 50%.",
+        "elevated_condition": "",
+        "team": "MICRODATA PROXIMITE"
+      },
+      {
+        "description": "Imprimantes ISO hors service",
+        "critical_condition": " Plus de 50% des imprimantes ISO hors service",
+        "elevated_condition": "Moins de 50% des imprimantes ISO hors service",
+        "team": "CBI"
+      },
+      {
+        "description": "100% des TPE sont hors service",
+        "critical_condition": " 100% des TPE sont hors service dans toutes les gares",
+        "elevated_condition": "100% des TPE sont hors service dans une seule gare",
+        "team": "CMI"
+      },
+      {
+        "description": "Panne générale des téléaffichages dans les gares",
+        "critical_condition": "Panne générale des téléaffichages dans les grandes gares",
+        "elevated_condition": "Panne générale des téléaffichages dans les petites et moyennes gares",
+        "team": "SOLARI"
+      },
+      {
+        "description": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
+        "critical_condition": "",
+        "elevated_condition": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
+        "team": "SCV"
+      },
+      {
+        "description": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
+        "critical_condition": "",
+        "elevated_condition": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
+        "team": "SCV"
+      }
+    ]
+  }
+  

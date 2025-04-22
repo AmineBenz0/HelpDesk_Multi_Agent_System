@@ -1,0 +1,26 @@
+{
+  "ticket_id": "TCK-20250420-0028",
+  "submitted_by": {
+    "name": "Responsable Exploitation",
+    "email": "airzet.game@gmail.com",
+    "location": "Établissement d'Airzet Games (localisation précise non spécifiée)"
+  },
+  "date_submitted": "2025-04-20T12:30:20.887982",
+  "ticket_type": "Incident",
+  "priority": "Élevée",
+  "status": "Open",
+  "description": "Problème de connexion réseau dans l'établissement d'Airzet Games, empêchant les agents d'accéder au système de vente et les clients d'effectuer des transactions, avec tous les postes de travail affectés et le réseau local hors service depuis plus de 2 heures.",
+  "subcategories": [
+    {
+      "confidence": "0.8",
+      "subcategory": "BÂTIMENT/DISTRICT"
+    }
+  ],
+  "assigned_to": null,
+  "date_resolved": null,
+  "resolution_notes": null,
+  "follow_up_sent_at": null,
+  "last_reminder_sent_at": null,
+  "response_timeout": null,
+  "notes": []
+}

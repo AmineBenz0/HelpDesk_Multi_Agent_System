@@ -1,0 +1,30 @@
+{
+  "ticket_id": "TCK-20250418-0015",
+  "submitted_by": {
+    "name": "Non spécifié",
+    "email": "airzet.game@gmail.com",
+    "location": "Non spécifié"
+  },
+  "date_submitted": "2025-04-18T14:58:21.222157",
+  "ticket_type": "Incident",
+  "priority": "Élevée",
+  "status": "Open",
+  "description": "Problème technique important affectant les opérations, les équipements ne fonctionnent pas correctement et causent des perturbations pour les utilisateurs, impactant directement le service aux clients.",
+  "subcategories": [
+    {
+      "confidence": "0.8",
+      "subcategory": "ECOM"
+    },
+    {
+      "confidence": "0.4",
+      "subcategory": "ONCF.MA"
+    }
+  ],
+  "assigned_to": null,
+  "date_resolved": null,
+  "resolution_notes": null,
+  "follow_up_sent_at": null,
+  "last_reminder_sent_at": null,
+  "response_timeout": null,
+  "notes": []
+}

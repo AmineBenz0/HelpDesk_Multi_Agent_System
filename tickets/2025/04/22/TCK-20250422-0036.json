@@ -1,0 +1,26 @@
+{
+  "ticket_id": "TCK-20250422-0036",
+  "submitted_by": {
+    "name": "Jean Dupont",
+    "email": "airzet.game@gmail.com",
+    "location": ""
+  },
+  "date_submitted": "2025-04-22T09:28:21.319393",
+  "ticket_type": "Incident",
+  "priority": "Élevée",
+  "status": "Open",
+  "description": "Problèmes de connexion réseau depuis ce matin. Impossible d'accéder à internet ou aux applications internes.",
+  "subcategories": [
+    {
+      "confidence": "0.8",
+      "subcategory": "ECOM"
+    }
+  ],
+  "assigned_to": null,
+  "date_resolved": null,
+  "resolution_notes": null,
+  "follow_up_sent_at": "2025-04-22T09:28:21.648410",
+  "last_reminder_sent_at": null,
+  "response_timeout": "2025-04-23T09:28:21.648410",
+  "notes": []
+}

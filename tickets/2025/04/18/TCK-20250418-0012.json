@@ -1,0 +1,26 @@
+{
+  "ticket_id": "TCK-20250418-0012",
+  "submitted_by": {
+    "name": "Jean Dupont",
+    "email": "airzet.game@gmail.com",
+    "location": "La gare"
+  },
+  "date_submitted": "2025-04-18T14:51:22.090717",
+  "ticket_type": "Incident",
+  "priority": "Élevée",
+  "status": "Open",
+  "description": "Problème d'électricité dans la gare, toutes les lumières sont éteintes et les bornes de vente de billets ne fonctionnent pas, empêchant les voyageurs d'acheter leurs tickets.",
+  "subcategories": [
+    {
+      "confidence": "0.9",
+      "subcategory": "Gares"
+    }
+  ],
+  "assigned_to": null,
+  "date_resolved": null,
+  "resolution_notes": null,
+  "follow_up_sent_at": null,
+  "last_reminder_sent_at": null,
+  "response_timeout": null,
+  "notes": []
+}

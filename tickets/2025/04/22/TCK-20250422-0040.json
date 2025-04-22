@@ -1,0 +1,26 @@
+{
+  "ticket_id": "TCK-20250422-0040",
+  "submitted_by": {
+    "name": "Sophie Lambert",
+    "email": "airzet.game@gmail.com",
+    "location": ""
+  },
+  "date_submitted": "2025-04-22T09:30:58.340590",
+  "ticket_type": "Incident",
+  "priority": "Élevée",
+  "status": "Open",
+  "description": "L'imprimante du bureau ne fonctionne plus. Elle affiche une erreur 'cartouche vide' mais nous avons changé les cartouches.",
+  "subcategories": [
+    {
+      "confidence": "0.8",
+      "subcategory": "BÂTIMENT/DISTRICT"
+    }
+  ],
+  "assigned_to": null,
+  "date_resolved": null,
+  "resolution_notes": null,
+  "follow_up_sent_at": "2025-04-22T09:30:58.757359",
+  "last_reminder_sent_at": null,
+  "response_timeout": "2025-04-23T09:30:58.757359",
+  "notes": []
+}

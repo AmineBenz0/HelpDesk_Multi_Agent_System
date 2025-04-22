@@ -1,14 +1,14 @@
 {
-  "ticket_id": "TCK-20250416-0001",
+  "ticket_id": "TCK-20250417-0004",
   "submitted_by": {
     "name": "Responsable Exploitation",
     "email": "airzet.game@gmail.com",
     "location": "Casablanca Port"
   },
-  "date_submitted": "2025-04-16T22:45:44.251224",
+  "date_submitted": "2025-04-17T23:31:06.826992",
   "ticket_type": "Incident",
-  "description": "Il y a une situation urgente au niveau de Casablanca Port, les agents ne peuvent pas continuer leur travail normalement.",
-  "priority": "Élevée",
+  "description": "Il y a une situation urgente au niveau de Casablanca Port. Les agents ne peuvent pas continuer leur travail normalement.",
+  "priority": "Ã‰levÃ©e",
   "assigned_to": null,
   "status": "Open",
   "resolution_notes": null,
@@ -17,10 +17,6 @@
     {
       "category": "Gares",
       "confidence": "0.9"
-    },
-    {
-      "category": "ONCF TRAFIC",
-      "confidence": "0.6"
     }
   ]
 }

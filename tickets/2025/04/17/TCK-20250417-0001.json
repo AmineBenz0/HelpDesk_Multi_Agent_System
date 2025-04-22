@@ -1,0 +1,22 @@
+{
+  "ticket_id": "TCK-20250417-0001",
+  "submitted_by": {
+    "name": "M. El Idrissi",
+    "email": "airzet.game@gmail.com",
+    "location": "Non spécifiée"
+  },
+  "date_submitted": "2025-04-17T11:46:11.957750",
+  "ticket_type": "Incident",
+  "description": "Un dysfonctionnement a été observé dans les services d'Airzet Games ce matin, impactant la fluidité des opérations.",
+  "priority": "Élevée",
+  "assigned_to": null,
+  "status": "Open",
+  "resolution_notes": null,
+  "date_resolved": null,
+  "subcategories": [
+    {
+      "category": "ECOM",
+      "confidence": "0.8"
+    }
+  ]
+}

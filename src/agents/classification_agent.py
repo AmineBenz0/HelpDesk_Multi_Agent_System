@@ -13,20 +13,34 @@ class ClassifierAgent:
     def classify_email(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Classify an email into predefined categories."""
         logger.info("Classifying email...")
-        
-        # Access email data from the state
         email_data = state["email_data"]
-        sender = email_data["from"]  # Direct access since we know it exists
-        subject = email_data["subject"]
-        body = email_data["body"]
         
+        # Log thread ID for persistence tracking
+        thread_id = email_data.get("persistent_thread_id")
+        if thread_id:
+            logger.debug(f"Processing thread_id: {thread_id}")
+        else:
+            logger.warning("No persistent_thread_id found in email_data")
+        
+        # Combine all messages in the thread for classification
+        if "messages" in email_data:
+            thread_text = ""
+            for msg in email_data["messages"]:
+                from_ = msg.get("from", "Unknown")
+                subject = msg.get("subject", "No Subject")
+                body = msg.get("body", "")
+                thread_text += f"\n--- Message from {from_} ---\nSubject: {subject}\n{body}\n"
+            sender = email_data["messages"][0].get("from", "Unknown")
+            subject = email_data["messages"][0].get("subject", "No Subject")
+            body = thread_text
+        else:
+            sender = email_data.get("from", "Unknown")
+            subject = email_data.get("subject", "No Subject")
+            body = email_data.get("body", "")
         logger.debug(f"From: {sender}, Subject: {subject[:50]}...")
-        
         prompt = get_email_classification_prompt(sender, subject, body)
         llm_response = self.llm_handler.get_response(prompt)
         result = self._parse_response(llm_response)
-        
-        # Update the state with the classification result
         return {
             **state,
             "category": result["category"],

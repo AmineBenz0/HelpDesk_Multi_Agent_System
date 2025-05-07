@@ -1,0 +1,53 @@
+{
+  "ticket_id": "TKT-20250507-0006",
+  "user": {
+    "name": "Ahmed Benali",
+    "email": "airzet.game@gmail.com",
+    "location": "Gare de Casablanca"
+  },
+  "ticket_type": "Incident",
+  "priority": "CRITIQUE",
+  "description": "Problème avec le système de vente dans la gare de Casablanca, la fibre est affectée et tous les points de ventes ne marchent pas.",
+  "subcategories": [
+    {
+      "confidence": "1",
+      "subcategory": "GARES"
+    }
+  ],
+  "email_data": {
+    "persistent_thread_id": "196a6208a7c59ca0",
+    "messages": [
+      {
+        "message_id": "196a6208a7c59ca0",
+        "subject": "Problème dans la gare de Casablanca",
+        "from": "Airzet Games <airzet.game@gmail.com>",
+        "date": "Tue, 6 May 2025 16:04:20 +0100",
+        "body": "Bonjour,\r\n\r\nJe souhaite signaler un incident concernant le système de vente dans la\r\ngare de Casablanca.\r\nNous avons rencontré quelques difficultés ce matin avec le système.\r\n\r\nJe vous écris pour que vous puissiez prendre en charge ce problème.\r\n\r\nCordialement,\r\nAhmed Benali\r\nResponsable de maintenance\r\n"
+      },
+      {
+        "message_id": "196a6e1e6f3efda3",
+        "subject": "",
+        "from": "Airzet Games <airzet.game@gmail.com>",
+        "date": "Tue, 6 May 2025 19:35:30 +0100",
+        "body": "La fibre est affectée et tous les points de ventes ne marchent pas"
+      },
+      {
+        "message_id": "196ab2d3fa233374",
+        "subject": "",
+        "from": "Airzet Games <airzet.game@gmail.com>",
+        "date": "Wed, 7 May 2025 15:36:19 +0100",
+        "body": "Gares"
+      }
+    ]
+  },
+  "status": "open",
+  "date_submitted": "2025-05-07 16:58:09.338167",
+  "date_resolved": null,
+  "assigned_to": null,
+  "resolution_notes": null,
+  "notes": [],
+  "thread_id": "196a6208a7c59ca0",
+  "message_id": "196a6208a7c59ca0",
+  "is_temp": false,
+  "stage": null
+}

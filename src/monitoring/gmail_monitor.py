@@ -9,6 +9,9 @@ from googleapiclient.discovery import Resource
 from config.settings import settings
 from src.utils.logger import logger
 from bs4 import BeautifulSoup
+from config.settings import settings
+import json
+import re
 
 class GmailMonitor:
     """Monitors Gmail inbox for new emails and processes them."""
@@ -21,6 +24,7 @@ class GmailMonitor:
         self.poll_interval = poll_interval
         self.processing_flag = False
         self.last_processed_thread = None
+        self.should_monitor = True
         
         logger.info(f"Configured to monitor emails from: {authorized_emails or 'Any sender'}")
         logger.info(f"Poll interval: {poll_interval} seconds")
@@ -30,7 +34,7 @@ class GmailMonitor:
         logger.info("Starting email monitoring...")
         
         try:
-            while True:
+            while self.should_monitor:  # Use the control flag
                 if not self.processing_flag:
                     self._check_for_new_emails()
                 
@@ -41,6 +45,13 @@ class GmailMonitor:
         except Exception as e:
             logger.error(f"Monitoring error: {str(e)}")
             raise
+        finally:
+            logger.info("Email monitoring stopped")
+    
+    def stop_monitoring(self) -> None:
+        """Stop the email monitoring loop."""
+        logger.info("Stopping email monitoring...")
+        self.should_monitor = False
     
     def _check_for_new_emails(self) -> None:
         """Check for new emails and process them."""
@@ -59,6 +70,8 @@ class GmailMonitor:
         
         logger.debug(f"New thread detected: {thread_id}")
         self._process_thread(thread_data, thread_id)
+        # Stop monitoring after processing a new thread
+        self.stop_monitoring()
     
     def _get_latest_thread(self) -> Optional[Dict[str, Any]]:
         """Fetch the latest unread thread from Gmail."""
@@ -91,16 +104,38 @@ class GmailMonitor:
             messages = thread.get('messages', [])
             latest_msg = messages[-1]
             
-            headers = {h['name'].lower(): h['value'] for h in latest_msg['payload']['headers']}
+            # Filter messages not from the specified email
+            filtered_messages = []
+            for msg in messages:
+                msg_headers = {h['name'].lower(): h['value'] for h in msg['payload']['headers']}
+                sender = msg_headers.get('from', 'Unknown')
+                if 'amine.benzaarit0@gmail.com' not in sender:
+                    filtered_messages.append({
+                        'message_id': msg['id'],
+                        'subject': msg_headers.get('subject', 'No Subject'),
+                        'from': sender,
+                        'date': msg_headers.get('date', 'Unknown'),
+                        'body': self._extract_email_body(msg)
+                    })
             
-            return {
+            # If more than one message, trim reply content from each message body
+            if len(filtered_messages) > 1:
+                for msg in filtered_messages:
+                    body = msg['body']
+                    match = re.search(r"\nOn .+? <.+?> wrote:", body)
+                    if match:
+                        msg['body'] = body[:match.start()].strip()
+                # Remove subject for all but the first message
+                for i in range(1, len(filtered_messages)):
+                    filtered_messages[i]['subject'] = ''
+            
+            result = {
                 'persistent_thread_id': thread_id,
-                'message_id': latest_msg['id'],
-                'subject': headers.get('subject', 'No Subject'),
-                'from': headers.get('from', 'Unknown'),
-                'date': headers.get('date', 'Unknown'),
-                'body': self._extract_email_body(latest_msg)
+                'messages': filtered_messages
             }
+            logger.debug(f"Setting persistent_thread_id={thread_id} in result")
+            logger.debug(f"Retrieved thread for agent input: {json.dumps(result, ensure_ascii=False, indent=2)}")
+            return result
             
         except Exception as e:
             logger.error(f"Error fetching thread: {str(e)}")
@@ -114,7 +149,7 @@ class GmailMonitor:
         query = "is:inbox is:unread"
         
         # Add specific email filter
-        specific_email = "airzet.game@gmail.com"  # Replace with your desired email
+        specific_email = settings.AUTHORIZED_EMAILS
         query += f" from:{specific_email}"
         
         logger.info(f"Using query: {query}")
@@ -170,8 +205,25 @@ class GmailMonitor:
             initial_state = {
                 "email_data": thread_data,
                 "processed": False,
-                "category": ""
+                "category": "",
+                "description": "",
+                "status": "",
+                "ticket_id": "",
+                "missing_fields": [],
+                "follow_up_sent_at": "",
+                "user_responded": False,
+                "last_checked_at": "",
+                "user": {},
+                "subcategories": [],
+                "can_detect_priority": False,
+                "priority": ""
             }
+            
+            # Log that thread_id is set in email_data
+            if "persistent_thread_id" in thread_data:
+                logger.debug(f"Initial state contains persistent_thread_id: {thread_data['persistent_thread_id']}")
+            else:
+                logger.warning("persistent_thread_id missing in thread_data for initial state")
 
             logger.info("Executing workflow...")
             final_state = self.workflow.invoke(initial_state)

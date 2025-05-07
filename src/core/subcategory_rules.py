@@ -60,7 +60,30 @@ class SubcategoryRules:
             List of RuleTemplate objects for the subcategory
         """
         cls._load_rules()
-        return cls._rules.get(subcategory, [])
+        
+        # Handle None case
+        if subcategory is None:
+            logger.warning("Subcategory is None, returning empty rules list")
+            return []
+            
+        # Ensure subcategory is a string
+        if not isinstance(subcategory, str):
+            logger.warning(f"Subcategory is not a string (type: {type(subcategory)}), attempting to convert")
+            try:
+                subcategory = str(subcategory)
+            except Exception as e:
+                logger.error(f"Failed to convert subcategory to string: {str(e)}")
+                return []
+        
+        # Check if rules exist for this subcategory
+        if cls._rules is None:
+            logger.error("Rules dictionary is None")
+            return []
+            
+        # Return rules for subcategory or empty list if not found
+        rules = cls._rules.get(subcategory, [])
+        logger.debug(f"Found {len(rules)} rules for subcategory: {subcategory}")
+        return rules
 
     @classmethod
     def get_prompt_for_subcategory(cls, subcategory: str, email_thread: List[Dict[str, str]] = None) -> Optional[str]:
@@ -87,6 +110,10 @@ Condition normale: {template.elevated_condition}
 
 """
         
+        print("************************************************")
+        print(prompt) 
+        print("************************************************")
+
         # Add email thread context if available
         if email_thread:
             prompt += """

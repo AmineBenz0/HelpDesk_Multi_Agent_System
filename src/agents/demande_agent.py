@@ -15,12 +15,29 @@ class DemandeAgent:
         
         email_data = state["email_data"]
         
+        # Log thread ID for persistence tracking
+        thread_id = email_data.get("persistent_thread_id")
+        if thread_id:
+            logger.debug(f"Processing thread_id: {thread_id}")
+        else:
+            logger.warning("No persistent_thread_id found in email_data")
+        
+        # If thread, use first message for sender/subject, combine all bodies
+        if "messages" in email_data:
+            sender = email_data["messages"][0].get("from", "Unknown")
+            subject = email_data["messages"][0].get("subject", "No Subject")
+            message_id = email_data["messages"][0].get("message_id", "")
+            body = "\n".join([msg.get("body", "") for msg in email_data["messages"]])
+            email_info = {"from": sender, "subject": subject, "message_id": message_id, "body": body}
+        else:
+            email_info = email_data
+        
         # Create response email
-        response_text = self._generate_response(email_data)
+        response_text = self._generate_response(email_info)
         
         # Send email
         try:
-            success = self.gmail_sender.send_message(email_data["from"], email_data["subject"], response_text)
+            success = self.gmail_sender.send_message(email_info["from"], email_info["subject"], response_text)
             if success:
                 logger.info("Demande acknowledgment sent successfully")
                 return {**state, "status": "acknowledged"}
@@ -34,13 +51,4 @@ class DemandeAgent:
     def _generate_response(self, email_data: Dict[str, Any]) -> str:
         """Generate acknowledgment email text"""
         return f"""
-        
-Merci pour votre demande. Nous avons bien reçu votre requête concernant :
-    "{email_data['subject']}"
-        
-Notre équipe d'assistance va l'examiner et vous répondra dans un délai de 24 heures.
-Votre demande a été enregistrée sous le numéro de référence : {email_data['message_id']}
-
-    Cordialement,
-    L'équipe du support technique
-        """
+        \nMerci pour votre demande. Nous avons bien reçu votre requête concernant :\n    \"{email_data['subject']}\"\n        \nNotre équipe d'assistance va l'examiner et vous répondra dans un délai de 24 heures.\nVotre demande a été enregistrée sous le numéro de référence : {email_data['message_id']}\n\n    Cordialement,\n    L'équipe du support technique\n        """

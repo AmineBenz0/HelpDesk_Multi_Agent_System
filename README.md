@@ -8,27 +8,31 @@ A sophisticated multi-agent system for automated email processing and helpdesk m
   - Real-time Gmail inbox monitoring
   - Configurable email filtering
   - Automated email processing pipeline
+  - Intelligent tracking of email threads and responses
 
 - **AI-Powered Classification**
   - Intelligent email categorization (Demande/Incident)
   - Natural Language Processing for content analysis
   - Confidence scoring and evidence extraction
 
-- **Advanced User Information Extraction**
-  - Automatic extraction of user details from emails
-  - Inference of missing information from context
-  - Creation of structured user profiles
+- **Advanced Information Extraction Pipeline**
+  - Field extraction from email content
+  - Contextual subcategory extraction with rules
+  - Priority detection based on content analysis
+  - Progress tracking at each extraction stage
 
-- **Intelligent Ticket Management**
-  - Automated ticket creation and categorization
-  - Subcategory classification with confidence scoring
-  - Priority determination based on content analysis
-  - Persistent ticket storage and retrieval
+- **Structured Ticket Management**
+  - Sequential ticket numbering system (TKT-YYYYMMDD-XXXX format)
+  - Atomic file operations for reliable ticket storage
+  - Temporary ticket saving during processing stages
+  - Thread-based ticket tracking and linking
+  - Persistent storage with consistent organization
 
-- **Follow-Up System**
-  - Automatic detection of missing information
-  - AI-generated personalized follow-up emails
-  - Smart handling of incomplete ticket data
+- **Comprehensive Follow-Up System**
+  - Specialized follow-up agents for different missing information types
+  - User response monitoring and state tracking
+  - Smart thread management for ongoing conversations
+  - Automatic state updates based on user responses
 
 - **Email Communication**
   - Automated response generation
@@ -37,10 +41,17 @@ A sophisticated multi-agent system for automated email processing and helpdesk m
   - Professional formatting and structuring
 
 - **Multi-Agent Architecture**
-  - Collaborative agent system
-  - Specialized agents for different tasks (Classification, Incident, Demande)
-  - Dynamic workflow management
-  - State tracking between processing steps
+  - Task-specific agent specialization
+  - Improved separation of concerns
+  - Stateful workflow management
+  - Process stage tracking with clear handoffs
+
+- **Real-time Dashboard**
+  - Interactive ticket visualization and filtering
+  - Dynamic date range selection
+  - Status-based categorization
+  - Multi-format ticket data compatibility
+  - User-friendly interface for system monitoring
 
 ## 📋 Prerequisites
 
@@ -91,20 +102,32 @@ LLM_TEMPERATURE = 0.1  # Model temperature for response generation
    - Authenticates with Gmail using OAuth 2.0
    - Monitors specified inbox for new emails
    - Classifies emails as Incidents or Demandes
-   - Extracts user information and ticket details
-   - Creates appropriate tickets in the management system
+   - Processes through multi-stage extraction pipeline:
+     - Field extraction (user details, request info)
+     - Subcategory extraction with rules-based validation
+     - Priority detection with contextual analysis
+   - Creates tickets with appropriate status tracking
    - Sends follow-up emails for missing information
+   - Monitors for user responses and updates ticket accordingly
    - Logs all activities and results
 
-## 🔧 Agent Descriptions
+## 🔧 Agent Architecture
 
-The system uses several specialized agents, each with a specific role:
+The system uses specialized agents, each handling a specific aspect of the workflow:
 
 - **ClassificationAgent**: Determines whether an email is an incident or a service request
-- **IncidentAgent**: Processes technical issues, classifies into subcategories, creates tickets
-- **DemandeAgent**: Handles service requests and information inquiries
-- **UserInfoExtractor**: Extracts and structures user information from emails
-- **FollowUpManager**: Identifies missing information and generates follow-up emails
+- **TicketCreationAgent**: Creates initial ticket structure from email content
+- **FieldExtractionAgent**: Extracts essential information fields from email content
+- **SubcategoryExtractionAgent**: Identifies appropriate subcategory for the ticket
+- **PriorityDetectionAgent**: Analyzes content to determine appropriate priority level
+- **ResponseMonitors**: Track user replies to follow-up emails
+  - **UserResponseMonitor**: Processes general user responses
+  - **SubcategoryResponseMonitor**: Handles subcategory confirmation responses
+- **Follow-Up Agents**: Generate specialized follow-up emails for missing information
+  - **MissingFieldsFollowUpAgent**: Follows up on incomplete basic information
+  - **MissingSubcategoryFollowUpAgent**: Requests clarification on ticket category
+  - **PriorityFollowUpAgent**: Seeks clarification on urgency when unclear
+  - **ConfirmSubcategoryFollowUpAgent**: Confirms subcategory selection with user
 
 ## 📊 System Architecture
 
@@ -113,28 +136,91 @@ HelpDesk_Multi_Agent_System/
 ├── config/
 │   ├── credentials/
 │   └── settings.py
+├── dashboard_data/
+│   └── (Dashboard data files)
 ├── src/
 │   ├── agents/
 │   │   ├── classification_agent.py
+│   │   ├── confirm_subcategory_follow_up_agent.py
 │   │   ├── demande_agent.py
-│   │   ├── incident_agent.py
-│   │   ├── follow_up_manager.py
-│   │   └── user_info_extractor.py
+│   │   ├── field_extraction_agent.py
+│   │   ├── missing_fields_follow_up_agent.py
+│   │   ├── missing_subcategory_follow_up_agent.py
+│   │   ├── priority_detection_agent.py
+│   │   ├── priority_follow_up_agent.py
+│   │   ├── subcategory_extraction_agent.py
+│   │   ├── subcategory_response_monitor.py
+│   │   ├── ticket_creation_agent.py
+│   │   └── user_response_monitor.py
 │   ├── core/
+│   │   ├── config/
 │   │   ├── gmail_service.py
 │   │   ├── gmail_sender.py
 │   │   ├── llm_handler.py
+│   │   ├── subcategory_rules.py
 │   │   ├── ticket_management.py
 │   │   └── workflow.py
+│   ├── dashboard/
+│   │   └── app.py
 │   ├── monitoring/
 │   │   └── gmail_monitor.py
+│   ├── tickets/
+│   │   └── (Ticket management functionality)
 │   ├── utils/
+│   │   ├── email_utils.py
 │   │   ├── logger.py
 │   │   └── prompts.py
 │   └── main.py
+├── tickets/
+│   ├── counter.json
+│   └── YYYY/MM/DD/
+│       └── (Ticket files organized by date)
 ├── requirements.txt
 └── README.md
 ```
+
+## 🎯 Ticket Handling
+
+### Ticket Creation Workflow
+1. **Initial Email Processing**
+   - Email content is classified and basic ticket created
+   - Thread ID used for tracking and linking related emails
+
+2. **Field Extraction**
+   - Temporary ticket saved with extracted fields
+   - Status marked as "in-progress"
+
+3. **Subcategory Extraction**
+   - Subcategory determined using rules-based system
+   - Temporary ticket updated with subcategory information
+
+4. **Priority Detection**
+   - Priority level assigned based on content analysis
+   - Final ticket created with complete information
+
+### Ticket Naming Convention
+- Format: `TKT-YYYYMMDD-XXXX`
+- Sequential counter maintained in counter.json
+- Temporary tickets use thread_id_TEMP.json naming
+- Final tickets use thread_id.json
+
+### Follow-up Process
+1. Missing information detected during any extraction stage
+2. Appropriate follow-up agent generates specific email
+3. Response monitor tracks user replies
+4. Ticket updated with new information from responses
+5. Processing continues from appropriate stage
+
+## 📊 Dashboard
+
+The dashboard provides a real-time view of the ticket system:
+- Interactive filtering by date range, status, and category
+- Visual representation of ticket distribution
+- Quick search and filtering capabilities
+- Detailed ticket information view
+- Status tracking and progress visualization
+
+Access the dashboard at `http://localhost:8051` after starting it.
 
 ## 🔍 Monitoring and Logging
 
@@ -143,6 +229,8 @@ HelpDesk_Multi_Agent_System/
 - Detailed error tracking and debugging
 - Email sending transaction logs
 - Performance metrics collection
+- Atomic file operations for data integrity
+- Thread tracking for complete conversation history
 
 ## 🤝 Contributing
 

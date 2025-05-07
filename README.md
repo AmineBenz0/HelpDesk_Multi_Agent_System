@@ -111,6 +111,52 @@ LLM_TEMPERATURE = 0.1  # Model temperature for response generation
    - Monitors for user responses and updates ticket accordingly
    - Logs all activities and results
 
+### System Process Flow
+
+```mermaid
+graph TD
+    A[New Email Received] --> B[ClassificationAgent]
+    B -->|Classify| C[TicketCreationAgent]
+    C -->|Create Initial Ticket| D[FieldExtractionAgent]
+    
+    %% Main Happy Path
+    D -->|Fields Complete| E[SubcategoryExtractionAgent]
+    E -->|Subcategory Identified| F[PriorityDetectionAgent]
+    F -->|Priority Determined| G[Final Ticket Created]
+    
+    %% Field Extraction Follow-up Path
+    D -->|Missing Fields| H[MissingFieldsFollowUpAgent]
+    H -->|Send Follow-up| I[UserResponseMonitor]
+    I -->|Response Received| D
+    
+    %% Subcategory Extraction Follow-up Path
+    E -->|Uncertain Subcategory| J[MissingSubcategoryFollowUpAgent]
+    J -->|Send Follow-up| K[UserResponseMonitor]
+    K -->|Response Received| E
+    
+    %% Subcategory Confirmation Path
+    E -->|Needs Confirmation| L[ConfirmSubcategoryFollowUpAgent]
+    L -->|Send Confirmation Request| M[SubcategoryResponseMonitor]
+    M -->|Confirmation Received| F
+    
+    %% Priority Detection Follow-up Path
+    F -->|Unclear Priority| N[PriorityFollowUpAgent]
+    N -->|Send Follow-up| O[UserResponseMonitor]
+    O -->|Response Received| F
+    
+    %% Finalization
+    G -->|Complete| P[Dashboard Update]
+    
+    %% Styling
+    classDef agents fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef monitors fill:#bbf,stroke:#333,stroke-width:1px;
+    classDef actions fill:#dfd,stroke:#333,stroke-width:1px;
+    
+    class B,C,D,E,F,H,J,L,N agents;
+    class I,K,M,O monitors;
+    class A,G,P actions;
+```
+
 ## 🔧 Agent Architecture
 
 The system uses specialized agents, each handling a specific aspect of the workflow:

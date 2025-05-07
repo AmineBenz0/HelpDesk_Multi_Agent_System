@@ -148,13 +148,15 @@ graph TD
     G -->|Complete| P[Dashboard Update]
     
     %% Styling
-    classDef agents fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef monitors fill:#bbf,stroke:#333,stroke-width:1px;
-    classDef actions fill:#dfd,stroke:#333,stroke-width:1px;
+    classDef agents fill:#f9f,stroke:#333,stroke-width:2px,color:#000;
+    classDef monitors fill:#bbf,stroke:#333,stroke-width:1px,color:#000;
+    classDef actions fill:#dfd,stroke:#333,stroke-width:1px,color:#000;
+    classDef edges color:#333,stroke-width:2px;
     
     class B,C,D,E,F,H,J,L,N agents;
     class I,K,M,O monitors;
     class A,G,P actions;
+    linkStyle default stroke:#333,stroke-width:1.5px;
 ```
 
 ## 🔧 Agent Architecture

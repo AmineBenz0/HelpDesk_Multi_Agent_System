@@ -21,7 +21,8 @@ A sophisticated multi-agent system for automated email processing and helpdesk m
   - Priority detection based on content analysis
   - Progress tracking at each extraction stage
 
-- **Structured Ticket Management**
+- **Enhanced Ticket Routing and Management**
+  - Automatic team assignment via affectation teams
   - Sequential ticket numbering system (TKT-YYYYMMDD-XXXX format)
   - Atomic file operations for reliable ticket storage
   - Temporary ticket saving during processing stages
@@ -50,6 +51,7 @@ A sophisticated multi-agent system for automated email processing and helpdesk m
   - Interactive ticket visualization and filtering
   - Dynamic date range selection
   - Status-based categorization
+  - Team assignment tracking and display
   - Multi-format ticket data compatibility
   - User-friendly interface for system monitoring
 
@@ -105,7 +107,7 @@ LLM_TEMPERATURE = 0.1  # Model temperature for response generation
    - Processes through multi-stage extraction pipeline:
      - Field extraction (user details, request info)
      - Subcategory extraction with rules-based validation
-     - Priority detection with contextual analysis
+     - Priority detection with contextual analysis and team assignment
    - Creates tickets with appropriate status tracking
    - Sends follow-up emails for missing information
    - Monitors for user responses and updates ticket accordingly
@@ -122,7 +124,7 @@ graph TD
     %% Main Happy Path
     D -->|Fields Complete| E[SubcategoryExtractionAgent]
     E -->|Subcategory Identified| F[PriorityDetectionAgent]
-    F -->|Priority Determined| G[Final Ticket Created]
+    F -->|Priority & Team Determined| G[Final Ticket Created]
     
     %% Field Extraction Follow-up Path
     D -->|Missing Fields| H[MissingFieldsFollowUpAgent]
@@ -167,7 +169,7 @@ The system uses specialized agents, each handling a specific aspect of the workf
 - **TicketCreationAgent**: Creates initial ticket structure from email content
 - **FieldExtractionAgent**: Extracts essential information fields from email content
 - **SubcategoryExtractionAgent**: Identifies appropriate subcategory for the ticket
-- **PriorityDetectionAgent**: Analyzes content to determine appropriate priority level
+- **PriorityDetectionAgent**: Analyzes content to determine appropriate priority level and assigns tickets to the correct team
 - **ResponseMonitors**: Track user replies to follow-up emails
   - **UserResponseMonitor**: Processes general user responses
   - **SubcategoryResponseMonitor**: Handles subcategory confirmation responses
@@ -239,11 +241,12 @@ HelpDesk_Multi_Agent_System/
    - Status marked as "in-progress"
 
 3. **Subcategory Extraction**
-   - Subcategory determined using rules-based system
+   - Subcategory determined using improved rules-based system
    - Temporary ticket updated with subcategory information
 
-4. **Priority Detection**
-   - Priority level assigned based on content analysis
+4. **Priority Detection and Team Assignment**
+   - Priority level assigned based on rule matching (P1/P2)
+   - Affectation team determined for proper routing
    - Final ticket created with complete information
 
 ### Ticket Naming Convention
@@ -251,6 +254,12 @@ HelpDesk_Multi_Agent_System/
 - Sequential counter maintained in counter.json
 - Temporary tickets use thread_id_TEMP.json naming
 - Final tickets use thread_id.json
+
+### Priority and Affectation Rules
+- **Enhanced rule structure** with P1 (CRITIQUE) and P2 (ELEVEE) levels
+- Each rule includes description, priority level, and affectation team
+- Rules organized by subcategory for precise matching
+- Tickets automatically routed to appropriate teams based on content analysis
 
 ### Follow-up Process
 1. Missing information detected during any extraction stage
@@ -264,8 +273,9 @@ HelpDesk_Multi_Agent_System/
 The dashboard provides a real-time view of the ticket system:
 - Interactive filtering by date range, status, and category
 - Visual representation of ticket distribution
+- Team assignment tracking for workload monitoring
 - Quick search and filtering capabilities
-- Detailed ticket information view
+- Detailed ticket information view with affectation team display
 - Status tracking and progress visualization
 
 Access the dashboard at `http://localhost:8051` after starting it.

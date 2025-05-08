@@ -34,6 +34,7 @@ from src.agents.confirm_subcategory_follow_up_agent import ConfirmSubcategoryFol
 from src.agents.subcategory_response_monitor import SubcategoryResponseMonitor
 from src.agents.missing_subcategory_follow_up_agent import MissingSubcategoryFollowUpAgent
 from src.agents.priority_follow_up_agent import PriorityFollowUpAgent
+from src.agents.priority_response_monitor import PriorityResponseMonitor
 
 def run_dashboard():
     """Run the dashboard in a subprocess."""
@@ -79,6 +80,8 @@ def main():
         subcategory_response_monitor = SubcategoryResponseMonitor(gmail_service.service, llm_handler)
         missing_subcategory_follow_up_agent = MissingSubcategoryFollowUpAgent(gmail_sender, llm_handler)
         priority_follow_up_agent = PriorityFollowUpAgent(gmail_sender, llm_handler)
+        priority_response_monitor = PriorityResponseMonitor(gmail_service.service, llm_handler)
+        
         # Create workflow
         workflow = create_workflow(
             classifier_agent=classifier_agent,
@@ -92,7 +95,8 @@ def main():
             confirm_subcategory_follow_up_agent=confirm_subcategory_follow_up_agent,
             subcategory_response_monitor=subcategory_response_monitor,
             missing_subcategory_follow_up_agent=missing_subcategory_follow_up_agent,
-            priority_follow_up_agent=priority_follow_up_agent
+            priority_follow_up_agent=priority_follow_up_agent,
+            priority_response_monitor=priority_response_monitor
         )
 
         # Start email monitor in a separate thread

@@ -15,7 +15,9 @@ class TicketCreationAgent:
         user = state["user"]
         description = state["description"]
         subcategories = state["subcategories"]
+        final_subcategory = state.get("final_subcategory", "")
         priority = state["priority"]
+        affectation_team = state.get("affectation_team", "")
         email_data = state["email_data"]
         ticket_type = state.get("ticket_type", "Incident")
         
@@ -33,6 +35,16 @@ class TicketCreationAgent:
         else:
             thread_id = email_data.get("persistent_thread_id")
             message_id = email_data.get("message_id", None)
+        
+        # If no final_subcategory but we have subcategories, try to set it
+        if not final_subcategory and subcategories:
+            # Try to extract from subcategories
+            if isinstance(subcategories, list) and subcategories:
+                if isinstance(subcategories[0], dict):
+                    final_subcategory = subcategories[0].get("subcategory", "")
+                elif isinstance(subcategories[0], str):
+                    final_subcategory = subcategories[0]
+            logger.info(f"Set final_subcategory from subcategories: {final_subcategory}")
             
         # Helper function to delete temporary ticket file if it exists
         def delete_temp_file():
@@ -74,6 +86,8 @@ class TicketCreationAgent:
                     priority=priority,
                     description=description,
                     subcategories=subcategories,
+                    final_subcategory=final_subcategory,
+                    affectation_team=affectation_team,
                     thread_id=thread_id,
                     message_id=message_id
                 )
@@ -92,6 +106,8 @@ class TicketCreationAgent:
                     priority=priority,
                     description=description,
                     subcategories=subcategories,
+                    final_subcategory=final_subcategory,
+                    affectation_team=affectation_team,
                     email_data=email_data,
                     thread_id=thread_id,
                     message_id=message_id
@@ -109,6 +125,8 @@ class TicketCreationAgent:
                 priority=priority,
                 description=description,
                 subcategories=subcategories,
+                final_subcategory=final_subcategory,
+                affectation_team=affectation_team,
                 email_data=email_data,
                 thread_id=thread_id,
                 message_id=message_id

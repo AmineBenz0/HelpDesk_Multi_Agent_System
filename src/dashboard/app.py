@@ -66,17 +66,17 @@ class Dashboard:
                     if not day_dir.is_dir() or not day_dir.name.isdigit():
                         continue
                     
-                    # Get all ticket files in this day folder (non-temp files only)
+                    # Get all ticket files in this day folder (including temp files)
                     for ticket_file in day_dir.glob('*.json'):
-                        # Skip temporary tickets
-                        if "_TEMP" in ticket_file.name:
-                            continue
-                            
+                        # Include all JSON files - no longer skipping temporary tickets
                         try:
                             with open(ticket_file, 'r', encoding='utf-8') as f:
                                 ticket_data = json.load(f)
                                 
-                            # Create a Ticket object from the data
+                            # Add is_temp flag based on filename if not already in data
+                            if '_TEMP' in ticket_file.name and 'is_temp' not in ticket_data:
+                                ticket_data['is_temp'] = True
+                                
                             # Convert string dates to datetime objects
                             if 'date_submitted' in ticket_data and isinstance(ticket_data['date_submitted'], str):
                                 try:
@@ -153,11 +153,24 @@ class Dashboard:
                 user_name = ticket.user.get('name', 'Unknown') if isinstance(ticket.user, dict) else 'Unknown'
                 user_location = ticket.user.get('location', '') if isinstance(ticket.user, dict) else ''
                 
+                # Get subcategory info
+                final_subcategory = ticket.final_subcategory if hasattr(ticket, 'final_subcategory') else ""
+                
+                # Get affectation team
+                affectation_team = ticket.affectation_team if hasattr(ticket, 'affectation_team') else ""
+                
+                # Check if it's a temporary ticket
+                is_temp = ticket.is_temp if hasattr(ticket, 'is_temp') else False
+                temp_stage = ticket.stage if hasattr(ticket, 'stage') and is_temp else ""
+                
                 data.append({
                     'Ticket ID': ticket.ticket_id,
                     'Type': ticket.ticket_type,
                     'Priority': ticket.priority,
                     'Status': ticket.status,
+                    'Temp Status': f"TEMP ({temp_stage})" if is_temp else "",
+                    'Subcategory': final_subcategory,
+                    'Affectation Team': affectation_team,
                     'Submitted At': ticket.date_submitted.strftime('%Y-%m-%d %H:%M:%S') if hasattr(ticket.date_submitted, 'strftime') else ticket.date_submitted,
                     'Resolved At': ticket.date_resolved.strftime('%Y-%m-%d %H:%M:%S') if ticket.date_resolved and hasattr(ticket.date_resolved, 'strftime') else 'N/A',
                     'Description': ticket.description[:100] + '...' if len(ticket.description) > 100 else ticket.description,
@@ -170,6 +183,16 @@ class Dashboard:
                 user = ticket_data.get('user', {})
                 user_name = user.get('name', 'Unknown') if isinstance(user, dict) else 'Unknown'
                 user_location = user.get('location', '') if isinstance(user, dict) else ''
+                
+                # Get subcategory info
+                final_subcategory = ticket_data.get('final_subcategory', "")
+                
+                # Get affectation team
+                affectation_team = ticket_data.get('affectation_team', "")
+                
+                # Check if it's a temporary ticket
+                is_temp = ticket_data.get('is_temp', False)
+                temp_stage = ticket_data.get('stage', "") if is_temp else ""
                 
                 # Get date fields
                 date_submitted = ticket_data.get('date_submitted')
@@ -191,16 +214,17 @@ class Dashboard:
                 else:
                     resolved_str = 'N/A'
                 
-                description = ticket_data.get('description', '')
-                
                 data.append({
                     'Ticket ID': ticket_id,
                     'Type': ticket_data.get('ticket_type', 'Unknown'),
                     'Priority': ticket_data.get('priority', ''),
                     'Status': ticket_data.get('status', 'open'),
+                    'Temp Status': f"TEMP ({temp_stage})" if is_temp else "",
+                    'Subcategory': final_subcategory,
+                    'Affectation Team': affectation_team,
                     'Submitted At': date_str,
                     'Resolved At': resolved_str,
-                    'Description': description[:100] + '...' if len(description) > 100 else description,
+                    'Description': ticket_data.get('description', '')[:100] + '...' if len(ticket_data.get('description', '')) > 100 else ticket_data.get('description', ''),
                     'User': user_name,
                     'Location': user_location,
                     'Thread ID': ticket_data.get('thread_id', '')
@@ -244,6 +268,11 @@ class Dashboard:
                     st.write("**Type:** {}".format(ticket.ticket_type))
                     st.write("**Priority:** {}".format(ticket.priority))
                     st.write("**Status:** {}".format(ticket.status))
+                    
+                    # Show affectation team if available
+                    if hasattr(ticket, 'affectation_team') and ticket.affectation_team:
+                        st.write("**Affectation Team:** {}".format(ticket.affectation_team))
+                        
                     st.write("**Submitted At:** {}".format(
                         ticket.date_submitted.strftime('%Y-%m-%d %H:%M:%S') 
                         if hasattr(ticket.date_submitted, 'strftime') else ticket.date_submitted
@@ -265,6 +294,11 @@ class Dashboard:
                     st.write("**Type:** {}".format(ticket.get('ticket_type', 'Unknown')))
                     st.write("**Priority:** {}".format(ticket.get('priority', '')))
                     st.write("**Status:** {}".format(ticket.get('status', 'open')))
+                    
+                    # Show affectation team if available
+                    affectation_team = ticket.get('affectation_team', '')
+                    if affectation_team:
+                        st.write("**Affectation Team:** {}".format(affectation_team))
                     
                     date_submitted = ticket.get('date_submitted')
                     if date_submitted:
@@ -300,20 +334,29 @@ class Dashboard:
                 
                 # Show subcategories
                 subcategories = None
+                final_subcategory = None
                 if hasattr(ticket, 'subcategories'):
                     subcategories = ticket.subcategories
+                    final_subcategory = ticket.final_subcategory if hasattr(ticket, 'final_subcategory') else ""
                 else:
                     subcategories = ticket.get('subcategories', [])
+                    final_subcategory = ticket.get('final_subcategory', "")
                 
-                if subcategories:
-                    st.subheader("Subcategories")
+                if final_subcategory:
+                    st.markdown("#### Subcategory")
+                    st.write(f"**Final Subcategory:** {final_subcategory}")
+                elif subcategories:
+                    st.markdown("#### Subcategories")
                     for subcat in subcategories:
-                        if isinstance(subcat, dict) and 'subcategory' in subcat:
-                            st.write("- " + str(subcat['subcategory']))
-                        elif isinstance(subcat, str):
-                            st.write("- " + subcat)
+                        if isinstance(subcat, dict):
+                            if 'subcategory' in subcat:
+                                st.write(f"- {subcat['subcategory']} (Confidence: {subcat.get('confidence', 'N/A')})")
+                            elif 'category' in subcat:
+                                st.write(f"- {subcat['category']} (Confidence: {subcat.get('confidence', 'N/A')})")
                         else:
-                            st.write("- " + str(subcat))
+                            st.write(f"- {subcat}")
+                else:
+                    st.write("No subcategory information available")
                 
                 # Show thread ID if available
                 thread_id = None
@@ -361,6 +404,9 @@ class Dashboard:
                 ticket_type = ticket_data.ticket_type
                 priority = ticket_data.priority
                 description = ticket_data.description
+                is_temp = ticket_data.is_temp if hasattr(ticket_data, 'is_temp') else False
+                temp_stage = ticket_data.stage if hasattr(ticket_data, 'stage') and is_temp else ""
+                affectation_team = ticket_data.affectation_team if hasattr(ticket_data, 'affectation_team') else ""
                 if hasattr(ticket_data.date_submitted, 'strftime'):
                     submitted_at = ticket_data.date_submitted.strftime('%Y-%m-%d %H:%M:%S')
                 else:
@@ -370,6 +416,9 @@ class Dashboard:
                 ticket_type = ticket_data.get('ticket_type', 'Unknown')
                 priority = ticket_data.get('priority', '')
                 description = ticket_data.get('description', '')
+                is_temp = ticket_data.get('is_temp', False)
+                temp_stage = ticket_data.get('stage', '') if is_temp else ""
+                affectation_team = ticket_data.get('affectation_team', '')
                 
                 date_submitted = ticket_data.get('date_submitted')
                 if isinstance(date_submitted, str):
@@ -388,7 +437,10 @@ class Dashboard:
                 'type': ticket_type,
                 'priority': priority,
                 'description': description,
-                'submitted_at': submitted_at
+                'submitted_at': submitted_at,
+                'is_temp': is_temp,
+                'temp_stage': temp_stage,
+                'affectation_team': affectation_team
             })
         
         # Update known tickets
@@ -484,6 +536,11 @@ class Dashboard:
             options=available_statuses,
             default=available_statuses
         )
+        
+        # Add a filter for temporary tickets
+        include_temp_tickets = st.sidebar.checkbox("Show Temporary Tickets", value=True)
+        if include_temp_tickets:
+            st.sidebar.info("Temporary tickets are shown with a 'TEMP' status and represent tickets in progress.")
 
         # Reset notifications button
         st.sidebar.markdown("---")
@@ -520,20 +577,48 @@ class Dashboard:
             if show_tickets:
                 for ticket in show_tickets:
                     with st.container():
-                        st.info("""
-                        **Recent Ticket Activity**
-                        - ID: {id}
-                        - Type: {type}
-                        - Priority: {priority}
-                        - Submitted: {submitted_at}
-                        - Description: {description}
-                        """.format(
-                            id=ticket['id'],
-                            type=ticket['type'],
-                            priority=ticket['priority'],
-                            submitted_at=ticket['submitted_at'],
-                            description=ticket['description']
-                        ))
+                        # Add a visual indicator for temporary tickets
+                        is_temp = ticket.get('is_temp', False)
+                        temp_stage = ticket.get('temp_stage', '')
+                        
+                        # Choose between regular info box and a different styling for temp tickets
+                        if is_temp:
+                            # Use warning style for temporary tickets
+                            st.warning("""
+                            **Temporary Ticket{stage}**
+                            - ID: {id}
+                            - Type: {type}
+                            - Priority: {priority}
+                            - Affectation Team: {team}
+                            - Submitted: {submitted_at}
+                            - Description: {description}
+                            """.format(
+                                stage=f" ({temp_stage})" if temp_stage else "",
+                                id=ticket['id'],
+                                type=ticket['type'],
+                                priority=ticket['priority'],
+                                team=ticket.get('affectation_team', 'N/A'),
+                                submitted_at=ticket['submitted_at'],
+                                description=ticket['description']
+                            ))
+                        else:
+                            # Use regular info style for final tickets
+                            st.info("""
+                            **Recent Ticket Activity**
+                            - ID: {id}
+                            - Type: {type}
+                            - Priority: {priority}
+                            - Affectation Team: {team}
+                            - Submitted: {submitted_at}
+                            - Description: {description}
+                            """.format(
+                                id=ticket['id'],
+                                type=ticket['type'],
+                                priority=ticket['priority'],
+                                team=ticket.get('affectation_team', 'N/A'),
+                                submitted_at=ticket['submitted_at'],
+                                description=ticket['description']
+                            ))
             else:
                 st.info("No recent ticket activity")
                 
@@ -567,7 +652,11 @@ class Dashboard:
                 df = df[df['Priority'].isin(priority)]
             if status and 'Status' in df.columns:
                 df = df[df['Status'].isin(status)]
-            
+                
+            # Apply temp ticket filter
+            if not include_temp_tickets and 'Temp Status' in df.columns:
+                df = df[df['Temp Status'] == ""]
+                
             # Add active filters information
             if not df.empty and 'start_date' in locals() and 'end_date' in locals() and 'min_date' in locals() and 'max_date' in locals():
                 if start_date != min_date or end_date != max_date:
@@ -649,6 +738,16 @@ class Dashboard:
                         else:
                             priority_value = ticket.get('priority', '')
                         
+                        # Check if it's a temporary ticket
+                        is_temp = False
+                        temp_stage = ""
+                        if hasattr(ticket, 'is_temp'):
+                            is_temp = ticket.is_temp
+                            temp_stage = ticket.stage if hasattr(ticket, 'stage') else ""
+                        else:
+                            is_temp = ticket.get('is_temp', False)
+                            temp_stage = ticket.get('stage', "")
+                        
                         # Create a colored container based on priority
                         priority_colors = {
                             "CRITIQUE": "darkred",
@@ -659,9 +758,15 @@ class Dashboard:
                         
                         priority_color = priority_colors.get(priority_value, "gray")
                         
-                        st.markdown("""
-                        <div style="padding: 10px; border-radius: 5px; border-left: 5px solid {color}; background-color: rgba(0,0,0,0.05);">
-                        """.format(color=priority_color), unsafe_allow_html=True)
+                        # Add special styling for temporary tickets
+                        temp_style = """
+                        border: 2px dashed #888;
+                        background-color: rgba(200,200,200,0.15);
+                        """ if is_temp else ""
+                        
+                        st.markdown(f"""
+                        <div style="padding: 10px; border-radius: 5px; border-left: 5px solid {priority_color}; {temp_style} background-color: rgba(0,0,0,0.05);">
+                        """, unsafe_allow_html=True)
                         
                         details_col1, details_col2 = st.columns(2)
                         
@@ -669,6 +774,10 @@ class Dashboard:
                             st.markdown("#### Basic Information")
                             st.write("**Ticket ID:** {}".format(ticket_id))
                             
+                            # Display temporary status if applicable
+                            if is_temp:
+                                st.markdown(f"<span style='color: #888; font-weight: bold; background-color: #f0f0f0; padding: 2px 6px; border-radius: 3px;'>TEMPORARY ({temp_stage})</span>", unsafe_allow_html=True)
+                                
                             # Type
                             if hasattr(ticket, 'ticket_type'):
                                 st.write("**Type:** {}".format(ticket.ticket_type))
@@ -686,6 +795,12 @@ class Dashboard:
                                 st.write("**Status:** {}".format(ticket.status))
                             else:
                                 st.write("**Status:** {}".format(ticket.get('status', 'open')))
+                                
+                            # Affectation Team
+                            if hasattr(ticket, 'affectation_team') and ticket.affectation_team:
+                                st.write("**Affectation Team:** {}".format(ticket.affectation_team))
+                            elif not hasattr(ticket, 'affectation_team') and ticket.get('affectation_team', ''):
+                                st.write("**Affectation Team:** {}".format(ticket.get('affectation_team', '')))
                                 
                             # Dates
                             date_submitted = None
@@ -739,20 +854,27 @@ class Dashboard:
                             
                             # Subcategories
                             subcategories = None
+                            final_subcategory = None
                             if hasattr(ticket, 'subcategories'):
                                 subcategories = ticket.subcategories
+                                final_subcategory = ticket.final_subcategory if hasattr(ticket, 'final_subcategory') else ""
                             else:
                                 subcategories = ticket.get('subcategories', [])
+                                final_subcategory = ticket.get('final_subcategory', "")
                                 
-                            if subcategories:
+                            if final_subcategory:
+                                st.markdown("#### Subcategory")
+                                st.write(f"**Final Subcategory:** {final_subcategory}")
+                            elif subcategories:
                                 st.markdown("#### Subcategories")
                                 for subcat in subcategories:
-                                    if isinstance(subcat, dict) and 'subcategory' in subcat:
-                                        st.write("- " + str(subcat['subcategory']))
-                                    elif isinstance(subcat, str):
-                                        st.write("- " + subcat)
+                                    if isinstance(subcat, dict):
+                                        if 'subcategory' in subcat:
+                                            st.write(f"- {subcat['subcategory']} (Confidence: {subcat.get('confidence', 'N/A')})")
+                                        elif 'category' in subcat:
+                                            st.write(f"- {subcat['category']} (Confidence: {subcat.get('confidence', 'N/A')})")
                                     else:
-                                        st.write("- " + str(subcat))
+                                        st.write(f"- {subcat}")
                             
                             # Thread ID
                             thread_id = None

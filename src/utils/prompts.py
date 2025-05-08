@@ -219,24 +219,40 @@ EMAIL_PROMPTS = {
     ),
     "priority_follow_up": PromptTemplate(
         name="priority_follow_up",
-        template="""Tu es un assistant intelligent expert en gestion des incidents dans le système ferroviaire.\n\n
-        **Objectif** : Générer un email de suivi pour clarifier la priorité de l'incident, en posant des questions basées sur les règles de la sous-catégorie.\n\n
-        **Sous-catégorie** : {subcategory}\n\n**Règles de priorité pour cette sous-catégorie** :\n{rules}\n\n
-        **Instructions** :\n
-        1. Créer un email professionnel demandant à l'utilisateur de répondre à des questions pour déterminer si la situation est critique ou élevée.\n
-        2. Les questions doivent être claires, précises et permettre de distinguer les conditions critiques des conditions normales.\n
-        3. Maintenir un ton professionnel et courtois.\n\n
-        **Format de l'email** :\n
-        - Commencer par une salutation professionnelle\n
-        - Expliquer brièvement pourquoi nous avons besoin de cette précision\n
-        - Poser les questions de manière claire et structurée\n
-        - Terminer par une formule de politesse\n\n---\n\n
-        ### Format attendu (strictement JSON) :\n
-        # Ne réponds que par un objet JSON valide contenant le sujet et le contenu de l'email de suivi.\n\n
-        # ```json\n{{\n    
-        # \"subject\": \"Sujet de l'email de suivi\",\n    
-        # \"body\": \"Contenu de l'email de suivi avec les questions sur la priorité\"\n}}""",
-        description="Prompt for generating follow-up questions for priority clarification"
+        template="""Tu es un assistant expert en gestion des incidents ferroviaires.
+
+**Objectif** : Générer un email de suivi pour clarifier la priorité de l'incident, en posant uniquement les 1, 2 ou 3 questions les plus pertinentes et discriminantes, choisies selon leur lien direct avec le contenu du mail et les règles de la sous-catégorie.
+
+**Sous-catégorie** : {subcategory}
+
+**Règles de priorité pour cette sous-catégorie** :
+{rules}
+
+**Instructions** :
+1. Analyse attentivement le contenu du mail et les règles pour identifier les 1, 2 ou 3 questions les plus importantes, permettant de distinguer clairement une situation critique d'une situation normale.
+2. Ne pose que des questions directement liées au contexte du mail et aux règles : évite toute question générique, redondante ou qui ne s'applique pas au cas décrit.
+3. Ne te contente pas de reformuler les règles : adapte-les au contexte du mail pour obtenir des réponses réellement utiles à la priorisation.
+4. Chaque question doit être concise, claire, et permettre une réponse exploitable pour déterminer la priorité.
+5. Adopte un ton professionnel et courtois.
+
+**Format de l'email** :
+- Salutation professionnelle
+- Brève explication du besoin de précision
+- Questions sélectionnées (maximum 2 ou 3), formulées de façon claire et structurée
+- Formule de politesse
+
+---
+
+### Format attendu (strictement JSON) :
+# Ne réponds que par un objet JSON valide contenant le sujet et le contenu de l'email de suivi.
+
+# ```json
+{{
+    "subject": "Sujet de l'email de suivi",
+    "body": "Contenu de l'email de suivi avec les questions sur la priorité"
+}}
+""",
+        description="Prompt pour générer un email de suivi avec uniquement les questions les plus pertinentes pour clarifier la priorité"
     )
 }
 

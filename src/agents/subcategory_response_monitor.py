@@ -9,11 +9,12 @@ from src.utils.email_utils import ensure_thread_persistence
 class SubcategoryResponseMonitor(GmailMonitor):
     """Agent responsible for monitoring user responses to subcategory confirmation."""
     
-    def __init__(self, service: Any, poll_interval: int = 10):
+    def __init__(self, service: Any, llm_handler: Any, poll_interval: int = 10):
         super().__init__(service, None, poll_interval=poll_interval)
         self.thread_id = None
         self.last_checked_message_id = None
         self.should_monitor = True
+        self.llm_handler = llm_handler
 
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process the state to check for user response to subcategory confirmation."""
@@ -68,11 +69,20 @@ class SubcategoryResponseMonitor(GmailMonitor):
                         'body': self._extract_email_body(msg)
                     })
                 updated_email_data = ensure_thread_persistence(state["email_data"], filtered_messages)
+                
+                # Extract latest response body for analysis
+                latest_body = self._extract_email_body(latest_msg)
+                
+                # Analyze the response to determine selected subcategory
+                final_subcategory = self._analyze_subcategory_response(latest_body, state.get("subcategories", []))
+                logger.info(f"Detected final subcategory from response: {final_subcategory}")
+                
                 return {
                     **state,
                     "user_responded": True,
                     "last_checked_at": datetime.now().isoformat(),
-                    "email_data": updated_email_data
+                    "email_data": updated_email_data,
+                    "final_subcategory": final_subcategory
                 }
             logger.debug(f"No new responses in thread {thread_id}")
             return {**state, "user_responded": False, "last_checked_at": datetime.now().isoformat()}
@@ -91,3 +101,68 @@ class SubcategoryResponseMonitor(GmailMonitor):
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse LLM response: {str(e)}")
             return {"subcategories": []} 
+
+    def _analyze_subcategory_response(self, response_text: str, subcategories: list) -> str:
+        """
+        Analyze user response to determine which subcategory they confirmed.
+        
+        Args:
+            response_text: Text of the user's response message
+            subcategories: List of available subcategories 
+            
+        Returns:
+            str: The selected subcategory or empty string if can't determine
+        """
+        logger.debug("Analyzing subcategory response...")
+        
+        # If no subcategories to compare against, return empty
+        if not subcategories:
+            return ""
+            
+        # Prepare prompt for LLM
+        subcategory_options = []
+        for subcat in subcategories:
+            if isinstance(subcat, dict):
+                if 'subcategory' in subcat:
+                    subcategory_options.append(subcat['subcategory'])
+                elif 'category' in subcat:
+                    subcategory_options.append(subcat['category'])
+            elif isinstance(subcat, str):
+                subcategory_options.append(subcat)
+                
+        prompt = f"""
+        Analyse la réponse de l'utilisateur pour déterminer quelle sous-catégorie a été confirmée.
+        
+        Options de sous-catégories:
+        {', '.join(subcategory_options)}
+        
+        Réponse de l'utilisateur:
+        {response_text}
+        
+        Réponds au format JSON suivant:
+        ```json
+        {{
+            "selected_subcategory": "NOM_DE_LA_SOUSCATEGORIE"
+        }}
+        ```
+        Si aucune sous-catégorie n'est clairement indiquée, utilise la première de la liste comme valeur par défaut.
+        """
+        
+        try:
+            # Get LLM response
+            llm_response = self.llm_handler.get_response(prompt)
+            result = self._parse_response(llm_response)
+            selected = result.get("selected_subcategory", "")
+            
+            # If no selection was made, use the first subcategory as default
+            if not selected and subcategory_options:
+                selected = subcategory_options[0]
+                logger.info(f"No clear selection from response, using first subcategory: {selected}")
+                
+            return selected
+        except Exception as e:
+            logger.error(f"Error analyzing subcategory response: {str(e)}")
+            # Fallback to the first subcategory if available
+            if subcategory_options:
+                return subcategory_options[0]
+            return "" 

@@ -16,6 +16,8 @@ class PriorityDetectionAgent:
         
         email_data = state["email_data"]
         subcategories = state.get("subcategories", [])
+        # Use final_subcategory if available
+        final_subcategory = state.get("final_subcategory", "")
         user = state.get("user", {})
         description = state.get("description", "")
         
@@ -32,66 +34,43 @@ class PriorityDetectionAgent:
         else:
             message_id = email_data.get("message_id", None)
         
-        # If no subcategories, can't determine priority
-        if not subcategories:
-            logger.warning("No subcategories found, can't determine priority")
-            output_state = {
-                **state,
-                "priority": "",
-                "reason": "Aucune sous-catégorie trouvée",
-            }
-            
-            # Create a fallback temporary ticket if ticket_manager is available
-            if self.ticket_manager:
-                # Create fallback temporary ticket
-                temp_ticket = self.ticket_manager.create_temp_ticket(
-                    stage="PRIORITY_FALLBACK",
-                    user=user,
-                    ticket_type="Incident",
-                    priority="",
-                    description=description,
-                    subcategories=subcategories,
-                    email_data=email_data,
-                    thread_id=thread_id,
-                    message_id=message_id
-                )
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved fallback temporary ticket after priority detection: {ticket_path}")
-                output_state["temp_priority_ticket_id"] = temp_ticket.ticket_id
-                
-            return output_state
-        
-        # Extract the subcategory string
-        # Handle both string and list/dict cases
+        # Get subcategory from final_subcategory if available, otherwise extract it
         subcategory = None
-        logger.debug(f"Attempting to extract subcategory from: {subcategories}")
+        if final_subcategory:
+            subcategory = final_subcategory
+            logger.info(f"Using final_subcategory: {subcategory}")
+        # If no final_subcategory but subcategories are available, extract it
+        elif subcategories:
+            logger.debug(f"Attempting to extract subcategory from: {subcategories}")
+            
+            if isinstance(subcategories, str):
+                subcategory = subcategories
+                logger.debug(f"Extracted subcategory from string: {subcategory}")
+            elif isinstance(subcategories, list) and subcategories:
+                first_item = subcategories[0]
+                if isinstance(first_item, str):
+                    subcategory = first_item
+                elif isinstance(first_item, dict) and 'subcategory' in first_item:
+                    subcategory = first_item['subcategory']
+                # Log the extraction for debugging
+                logger.debug(f"Extracted subcategory '{subcategory}' from list item: {first_item}")
+            elif isinstance(subcategories, dict) and subcategories:
+                # Try to get the subcategory value if it exists
+                if 'subcategory' in subcategories:
+                    subcategory = subcategories['subcategory']
+                # Or try first key as fallback
+                else:
+                    try:
+                        subcategory = next(iter(subcategories))
+                    except:
+                        subcategory = None
+                # Log the extraction for debugging
+                logger.debug(f"Extracted subcategory '{subcategory}' from dictionary: {subcategories}")
         
-        if isinstance(subcategories, str):
-            subcategory = subcategories
-            logger.debug(f"Extracted subcategory from string: {subcategory}")
-        elif isinstance(subcategories, list) and subcategories:
-            first_item = subcategories[0]
-            if isinstance(first_item, str):
-                subcategory = first_item
-            elif isinstance(first_item, dict) and 'subcategory' in first_item:
-                subcategory = first_item['subcategory']
-            # Log the extraction for debugging
-            logger.debug(f"Extracted subcategory '{subcategory}' from list item: {first_item}")
-        elif isinstance(subcategories, dict) and subcategories:
-            # Try to get the subcategory value if it exists
-            if 'subcategory' in subcategories:
-                subcategory = subcategories['subcategory']
-            # Or try first key as fallback
-            else:
-                try:
-                    subcategory = next(iter(subcategories))
-                except:
-                    subcategory = None
-            # Log the extraction for debugging
-            logger.debug(f"Extracted subcategory '{subcategory}' from dictionary: {subcategories}")
+        # If no subcategory could be determined, can't proceed
         if not subcategory:
-            logger.warning(f"Could not extract a valid subcategory from: {subcategories}")
-            output_state = {**state, "priority": "", "reason": "Impossible d'extraire une sous-catégorie valide"}
+            logger.warning(f"Could not find or extract a valid subcategory")
+            output_state = {**state, "priority": "", "reason": "Impossible d'extraire une sous-catégorie valide", "affectation_team": ""}
             
             # Create a fallback temporary ticket if ticket_manager is available
             if self.ticket_manager:
@@ -103,6 +82,8 @@ class PriorityDetectionAgent:
                     priority="",
                     description=description,
                     subcategories=subcategories,
+                    final_subcategory=final_subcategory,
+                    affectation_team="",
                     email_data=email_data,
                     thread_id=thread_id,
                     message_id=message_id
@@ -112,12 +93,12 @@ class PriorityDetectionAgent:
                 output_state["temp_priority_ticket_id"] = temp_ticket.ticket_id
                 
             return output_state
-            
+        
         # Get rules for the subcategory
         rules = SubcategoryRules.get_rules_for_subcategory(subcategory)
         if not rules:
             logger.warning(f"No rules found for subcategory: {subcategory}")
-            output_state = {**state, "priority": "", "reason": f"Aucune règle trouvée pour la sous-catégorie: {subcategory}"}
+            output_state = {**state, "priority": "", "reason": f"Aucune règle trouvée pour la sous-catégorie: {subcategory}", "affectation_team": ""}
             
             # Create a fallback temporary ticket if ticket_manager is available
             if self.ticket_manager:
@@ -129,6 +110,8 @@ class PriorityDetectionAgent:
                     priority="",
                     description=description,
                     subcategories=subcategories,
+                    final_subcategory=final_subcategory,
+                    affectation_team="",
                     email_data=email_data,
                     thread_id=thread_id,
                     message_id=message_id
@@ -151,11 +134,12 @@ class PriorityDetectionAgent:
             llm_response = self.llm_handler.get_response(prompt)
             result = self._parse_response(llm_response)
             
-            # Prepare updated state with priority and reason
+            # Prepare updated state with priority, reason, and affectation team
             output_state = {
                 **state, 
                 "priority": result.get("priority", ""),
-                "reason": result.get("reason", "Non spécifié")
+                "reason": result.get("reason", "Non spécifié"),
+                "affectation_team": result.get("affectation_team", "")
             }
             
             # Create and save temporary ticket if ticket_manager is available
@@ -168,6 +152,8 @@ class PriorityDetectionAgent:
                     priority=result.get("priority", ""),
                     description=description,
                     subcategories=subcategories,
+                    final_subcategory=final_subcategory,
+                    affectation_team=result.get("affectation_team", ""),
                     email_data=email_data,
                     thread_id=thread_id,
                     message_id=message_id
@@ -187,7 +173,8 @@ class PriorityDetectionAgent:
             output_state = {
                 **state, 
                 "priority": "",
-                "reason": f"Erreur lors de la détermination de la priorité: {str(e)}"
+                "reason": f"Erreur lors de la détermination de la priorité: {str(e)}",
+                "affectation_team": ""
             }
             
             # Create a fallback temporary ticket if ticket_manager is available
@@ -200,6 +187,8 @@ class PriorityDetectionAgent:
                     priority="",
                     description=description,
                     subcategories=subcategories,
+                    final_subcategory=final_subcategory,
+                    affectation_team="",
                     email_data=email_data,
                     thread_id=thread_id,
                     message_id=message_id
@@ -228,29 +217,48 @@ class PriorityDetectionAgent:
             subject = email_data.get("subject", "No Subject")
             body = email_data.get("body", "")
         
+        # Sort rules by priority level (P1/P2)
+        p1_rules = [rule for rule in rules if rule.priority_level == "P1"]
+        p2_rules = [rule for rule in rules if rule.priority_level == "P2"]
+        
         prompt = f"""Tu es un assistant intelligent expert en analyse d'incidents dans le système ferroviaire.
 
-**Objectif** : Déterminer la priorité de l'incident à partir de l'email.
+**Objectif** : Déterminer la priorité de l'incident à partir de l'email et identifier l'équipe d'affectation correspondante.
 
 **Sous-catégorie** : {subcategory}
 
 **Règles de priorité pour cette sous-catégorie** :
 """
-        for rule in rules:
-            prompt += f"""\n- Description: {rule.description}\n  Condition critique: {rule.critical_condition}\n  Condition normale: {rule.elevated_condition}\n"""
+        # Add P1 (Critical) rules
+        if p1_rules:
+            prompt += """\n**Règles CRITIQUES (P1)**:"""
+            for rule in p1_rules:
+                prompt += f"""\n- {rule.description} [Affectation: {rule.affectation}]"""
+                
+        # Add P2 (Elevated) rules
+        if p2_rules:
+            prompt += """\n\n**Règles ÉLEVÉES (P2)**:"""
+            for rule in p2_rules:
+                prompt += f"""\n- {rule.description} [Affectation: {rule.affectation}]"""
         
-        prompt += f"""\n**Contenu de l'email** :
+        prompt += f"""\n\n**Contenu de l'email** :
 Expéditeur: {sender}
 Sujet: {subject}
 Message: {body}
 
-Analyse le contenu de l'email et détermine la priorité de l'incident selon les règles ci-dessus.
-Si les informations sont insuffisantes, indique-le dans la raison et laisse le champ priorité vide.
+Analyse le contenu de l'email et détermine:
+1. La priorité de l'incident selon les règles ci-dessus
+   - Si une règle CRITIQUE (P1) s'applique, la priorité est CRITIQUE.
+   - Si aucune règle CRITIQUE (P1) ne s'applique mais qu'une règle ELEVEE (P2) s'applique, la priorité est ELEVEE.
+   - Si aucune règle ne s'applique clairement ou si les informations sont insuffisantes, laisse le champ priorité vide.
+2. L'équipe d'affectation qui correspond à la règle identifiée.
 
 Réponds au format JSON suivant :
 {{
     "priority": "CRITIQUE" ou "ELEVEE" ou "",
-    "reason": "Explication détaillée de la décision"
+    "reason": "Explication détaillée de la décision",
+    "matching_rule": "La règle qui correspond à la situation (si applicable)",
+    "affectation_team": "L'équipe d'affectation associée à cette règle"
 }}
 """
         return prompt
@@ -276,6 +284,10 @@ Réponds au format JSON suivant :
                 logger.warning("Missing 'priority' field in response")
                 result["priority"] = ""
                 
+            if "affectation_team" not in result:
+                logger.warning("Missing 'affectation_team' field in response")
+                result["affectation_team"] = ""
+                
             # Normalize priority values
             if result.get("priority"):
                 priority = result["priority"].upper()
@@ -286,11 +298,12 @@ Réponds au format JSON suivant :
                     result["priority"] = priority
             
             logger.info(f"Detected priority: {result.get('priority', '')} - Reason: {result.get('reason', '')}")
+            logger.info(f"Affectation team: {result.get('affectation_team', '')}")
             return result
             
         except json.JSONDecodeError:
             logger.error("Invalid JSON response from LLM")
-            return {"priority": "", "reason": "Format de réponse invalide"}
+            return {"priority": "", "reason": "Format de réponse invalide", "affectation_team": ""}
         except Exception as e:
             logger.error(f"Response parsing failed: {str(e)}")
-            return {"priority": "", "reason": f"Erreur d'analyse: {str(e)}"} 
+            return {"priority": "", "reason": f"Erreur d'analyse: {str(e)}", "affectation_team": ""} 

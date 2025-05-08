@@ -2,7 +2,6 @@ import json
 from typing import Dict, Any
 from datetime import datetime
 from src.utils.logger import logger
-from src.utils.prompts import get_priority_follow_up_prompt
 from src.core.gmail_sender import GmailSender
 from src.core.subcategory_rules import SubcategoryRules
 from src.utils.email_utils import send_follow_up_email
@@ -22,18 +21,22 @@ class PriorityFollowUpAgent:
         email_data = state["email_data"]
         subcategories = state.get("subcategories", [])
         
-        # Handle empty subcategories case
-        if not subcategories:
-            logger.error("Priority follow-up requires at least one subcategory, none found.")
-            return state
+        # Use final_subcategory if available
+        final_subcategory = state.get("final_subcategory", "")
+        
+        # Handle the case where neither final_subcategory nor subcategories are available
+        if not final_subcategory:
+            if not subcategories:
+                logger.error("Priority follow-up requires at least one subcategory or final_subcategory, none found.")
+                return state
+                
+            # If no final_subcategory but subcategories are available, extract it
+            final_subcategory = self._extract_single_subcategory(subcategories)
+            if not final_subcategory:
+                logger.error(f"Failed to extract a valid subcategory from: {subcategories}")
+                return state
             
-        # Extract a single subcategory from the list
-        subcategory = self._extract_single_subcategory(subcategories)
-        if not subcategory:
-            logger.error(f"Failed to extract a valid subcategory from: {subcategories}")
-            return state
-            
-        logger.info(f"Using subcategory '{subcategory}' for priority follow-up")
+        logger.info(f"Using subcategory '{final_subcategory}' for priority follow-up")
         
         # Log thread ID for persistence tracking
         thread_id = email_data.get("persistent_thread_id")
@@ -51,13 +54,17 @@ class PriorityFollowUpAgent:
             message_id = email_data.get("message_id", None)
         
         # Get rules for the subcategory
-        rules = SubcategoryRules.get_rules_for_subcategory(subcategory)
+        rules = SubcategoryRules.get_rules_for_subcategory(final_subcategory)
         if not rules:
-            logger.error(f"No rules found for subcategory: {subcategory}")
+            logger.error(f"No rules found for subcategory: {final_subcategory}")
             return state
         
+        # Parse rules into critical (P1) and elevated (P2) rules
+        p1_rules = [rule for rule in rules if rule.priority_level == "P1"]
+        p2_rules = [rule for rule in rules if rule.priority_level == "P2"]
+        
         # Generate follow-up questions using LLM
-        prompt = get_priority_follow_up_prompt(subcategory, rules)
+        prompt = self._create_follow_up_prompt(final_subcategory, p1_rules, p2_rules)
         llm_response = self.llm_handler.get_response(prompt)
         result = self._parse_response(llm_response)
         
@@ -81,7 +88,48 @@ class PriorityFollowUpAgent:
             "follow_up_sent_at": datetime.now().isoformat(),
             "status": "waiting_for_priority_clarification"
         }
+
+    def _create_follow_up_prompt(self, subcategory: str, p1_rules: list, p2_rules: list) -> str:
+        """Create a prompt for LLM to generate follow-up questions based on subcategory rules."""
+        prompt = f"""Tu es un assistant du service d'assistance technique chargé de demander des informations complémentaires aux utilisateurs.
+
+Objectif: Créer un email de suivi pour clarifier la priorité d'un incident lié à la sous-catégorie "{subcategory}".
+
+Les règles de priorité sont les suivantes:
+
+Règles CRITIQUES (P1):
+"""
+        # Add P1 rules
+        for i, rule in enumerate(p1_rules, 1):
+            prompt += f"{i}. {rule.description} [Affectation: {rule.affectation}]\n"
+
+        prompt += "\nRègles ÉLEVÉES (P2):\n"
         
+        # Add P2 rules
+        for i, rule in enumerate(p2_rules, 1):
+            prompt += f"{i}. {rule.description} [Affectation: {rule.affectation}]\n"
+
+            prompt += f"""
+Crée un email de suivi poli et professionnel en français pour demander des précisions qui permettront de déterminer si l'incident correspond à une règle CRITIQUE (P1) ou ÉLEVÉE (P2).
+
+IMPORTANT: Pose MAXIMUM 3 questions, en sélectionnant uniquement les questions les plus pertinentes et discriminantes pour déterminer la priorité de l'incident dans la sous-catégorie "{subcategory}".
+
+L'email doit :
+1. Être adressé au destinataire de manière professionnelle
+2. Expliquer brièvement que vous avez besoin d'informations supplémentaires pour traiter efficacement l'incident
+3. Poser 1 à 3 questions ciblées et précises qui permettront de distinguer efficacement entre les règles P1 et P2
+4. Privilégier les questions qui aident à distinguer entre P1 et P2 pour des situations similaires
+5. Remercier l'utilisateur pour sa collaboration
+6. Inclure une formule de politesse appropriée
+
+Réponds au format JSON suivant :
+{{
+    "subject": "Sujet de l'email",
+    "body": "Corps complet de l'email"
+}}
+"""
+        return prompt
+
     def _extract_single_subcategory(self, subcategories):
         """
         Extract a single subcategory string from subcategories in various formats.

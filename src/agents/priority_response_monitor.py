@@ -4,8 +4,8 @@ from src.monitoring.gmail_monitor import GmailMonitor
 from src.utils.logger import logger
 from src.utils.email_utils import ensure_thread_persistence
 
-class UserResponseMonitor(GmailMonitor):
-    """Monitors a specific email thread for user responses."""
+class PriorityResponseMonitor(GmailMonitor):
+    """Monitors a specific email thread for priority clarification responses."""
     
     def __init__(self, service: Any, llm_handler: Any, poll_interval: int = 10):
         """Initialize with Gmail service and LLM handler.
@@ -52,7 +52,7 @@ class UserResponseMonitor(GmailMonitor):
                 
             # Check if there's a new message
             if latest_msg_id != self.last_checked_message_id:
-                logger.info(f"New response found in thread {self.thread_id}")
+                logger.info(f"New priority response found in thread {self.thread_id}")
                 self.last_checked_message_id = latest_msg_id
                 return True
                 
@@ -60,11 +60,11 @@ class UserResponseMonitor(GmailMonitor):
             return False
             
         except Exception as e:
-            logger.error(f"Error checking for response in thread {self.thread_id}: {str(e)}")
+            logger.error(f"Error checking for priority response in thread {self.thread_id}: {str(e)}")
             return False
             
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Process the state to check for user response.
+        """Process the state to check for user response to priority clarification.
         
         Args:
             state: Current workflow state
@@ -72,7 +72,7 @@ class UserResponseMonitor(GmailMonitor):
         Returns:
             Updated state with response status
         """
-        logger.info("Checking for user response...")
+        logger.info("Checking for priority clarification response...")
         
         # Get thread ID from state
         thread_id = state["email_data"].get("persistent_thread_id")
@@ -114,13 +114,14 @@ class UserResponseMonitor(GmailMonitor):
                 # Use utility function to ensure thread persistence
                 updated_email_data = ensure_thread_persistence(state["email_data"], filtered_messages)
             except Exception as e:
-                logger.error(f"Failed to fetch latest thread after user response: {str(e)}")
+                logger.error(f"Failed to fetch latest thread after priority response: {str(e)}")
                 updated_email_data = state["email_data"]
             return {
                 **state,
                 "user_responded": True,
                 "last_checked_at": datetime.now().isoformat(),
-                "email_data": updated_email_data
+                "email_data": updated_email_data,
+                "status": "priority_response_received"
             }
         else:
             return {

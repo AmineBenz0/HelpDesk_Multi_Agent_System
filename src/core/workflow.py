@@ -15,6 +15,7 @@ from src.agents.confirm_subcategory_follow_up_agent import ConfirmSubcategoryFol
 from src.agents.subcategory_response_monitor import SubcategoryResponseMonitor
 from src.agents.missing_subcategory_follow_up_agent import MissingSubcategoryFollowUpAgent
 from src.agents.priority_follow_up_agent import PriorityFollowUpAgent
+from src.agents.priority_response_monitor import PriorityResponseMonitor
 
 # Constants
 POLLING_INTERVAL = 30  # seconds
@@ -35,9 +36,11 @@ class EmailState(TypedDict):
         last_checked_at: Timestamp of last response check
         user: Dictionary containing user information
         subcategories: List of identified subcategories
+        final_subcategory: String representing the selected/final subcategory
         priority: String indicating ticket priority level (CRITIQUE or ELEVEE)
         reason: String explaining the reason for priority determination
         description: String containing incident description
+        affectation_team: String indicating which team should handle the ticket
     """
     email_data: dict
     processed: bool
@@ -50,9 +53,11 @@ class EmailState(TypedDict):
     last_checked_at: str
     user: dict
     subcategories: list
+    final_subcategory: str
     priority: str
     reason: str
     description: str
+    affectation_team: str
 
 def create_workflow(
         classifier_agent: Any, 
@@ -66,7 +71,8 @@ def create_workflow(
         confirm_subcategory_follow_up_agent: Any,
         subcategory_response_monitor: Any,
         missing_subcategory_follow_up_agent: Any,
-        priority_follow_up_agent: Any
+        priority_follow_up_agent: Any,
+        priority_response_monitor: Any
     ) -> Any:
     """
     Creates and configures the email processing workflow.
@@ -84,6 +90,7 @@ def create_workflow(
         subcategory_response_monitor: Initialized SubcategoryResponseMonitor instance
         missing_subcategory_follow_up_agent: Initialized MissingSubcategoryFollowUpAgent instance
         priority_follow_up_agent: Initialized PriorityFollowUpAgent instance
+        priority_response_monitor: Initialized PriorityResponseMonitor instance
     Returns:
         Compiled LangGraph workflow ready for execution
     """
@@ -106,7 +113,7 @@ def create_workflow(
     workflow.add_node("check_subcategory_response", subcategory_response_monitor.process)
     workflow.add_node("complete_processing", _mark_as_processed)
     workflow.add_node("priority_follow_up", priority_follow_up_agent.process)
-    workflow.add_node("check_priority_response", _route_based_on_priority_response)
+    workflow.add_node("check_priority_response", priority_response_monitor.process)
     
     # Conditional routing from classification to user info extraction
     workflow.add_conditional_edges("classify_email", _route_based_on_category,
@@ -226,7 +233,15 @@ def _route_based_on_subcategory(state: EmailState) -> str:
     
     # Case 2: Single subcategory
     if len(subcategories) == 1:
-        logger.info("Single subcategory found, routing to priority detection")
+        # Extract the subcategory value
+        if isinstance(subcategories[0], dict):
+            subcategory_value = subcategories[0].get("subcategory") or subcategories[0].get("category", "")
+        else:
+            subcategory_value = str(subcategories[0])
+            
+        # Set final_subcategory in the state
+        state["final_subcategory"] = subcategory_value
+        logger.info(f"Single subcategory found: {subcategory_value}, routing to priority detection")
         return "priority_detection"
     
     # Case 3: Multiple subcategories (2 or more)
@@ -244,6 +259,15 @@ def _route_based_on_subcategory(state: EmailState) -> str:
         logger.debug(f"Confidence difference between top subcategories: {confidence_diff}")
         
         if confidence_diff > 0.2:
+            # Extract the top subcategory value
+            if isinstance(sorted_subcats[0], dict):
+                subcategory_value = sorted_subcats[0].get("subcategory") or sorted_subcats[0].get("category", "")
+            else:
+                subcategory_value = str(sorted_subcats[0])
+                
+            # Set final_subcategory in the state
+            state["final_subcategory"] = subcategory_value
+            logger.info(f"Selected subcategory with high confidence: {subcategory_value}")
             logger.info("Significant confidence difference detected, routing to priority detection")
             return "priority_detection"
         else:

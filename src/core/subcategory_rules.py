@@ -12,19 +12,20 @@ class Priority(Enum):
 
 @dataclass
 class RuleTemplate:
-    description: str
-    critical_condition: str
-    elevated_condition: str
-    team: str
+    """Rule template for subcategory rules."""
+    description: str  # Full rule description
+    affectation: str  # Team responsible
+    priority_level: str  # P1 or P2
+    subcategory: str  # The subcategory this rule belongs to
 
 class SubcategoryRules:
-    """Defines rules and questions for each subcategory."""
+    """Defines rules and questions for each subcategory with the new JSON structure."""
     
     _rules: Dict[str, List[RuleTemplate]] = None
 
     @classmethod
     def _load_rules(cls) -> None:
-        """Load rules from JSON file."""
+        """Load rules from JSON file using the new structure."""
         if cls._rules is not None:
             return
 
@@ -34,19 +35,43 @@ class SubcategoryRules:
                 rules_data = json.load(f)
             
             cls._rules = {}
-            for subcategory, templates in rules_data.items():
-                cls._rules[subcategory] = [
-                    RuleTemplate(
-                        description=template["description"],
-                        critical_condition=template["critical_condition"],
-                        elevated_condition=template["elevated_condition"],
-                        team=template["team"]
+            
+            # New structure: data_buisness_rules > subcategory_P1/P2 > [rules]
+            business_rules = rules_data.get("data_buisness_rules", {})
+            
+            # Process each subcategory section
+            for section_name, rules_list in business_rules.items():
+                # Extract subcategory and priority from section name (format: SUBCATEGORY_P1)
+                if "_" in section_name:
+                    subcategory, priority_level = section_name.split("_", 1)
+                else:
+                    subcategory = section_name
+                    priority_level = "P1"  # Default if not specified
+                
+                # Initialize subcategory list if not exists
+                if subcategory not in cls._rules:
+                    cls._rules[subcategory] = []
+                
+                # Add rules for this subcategory
+                for rule_item in rules_list:
+                    rule_template = RuleTemplate(
+                        description=rule_item.get("rule", ""),
+                        affectation=rule_item.get("affectation", ""),
+                        priority_level=priority_level,
+                        subcategory=subcategory
                     )
-                    for template in templates
-                ]
-            logger.info("Subcategory rules loaded successfully")
+                    cls._rules[subcategory].append(rule_template)
+            
+            logger.info(f"Subcategory rules loaded successfully. Found {len(cls._rules)} subcategories.")
+            
+            # Debug log the loaded rules
+            for subcategory, rules in cls._rules.items():
+                logger.debug(f"Subcategory '{subcategory}': {len(rules)} rules")
+                
         except Exception as e:
             logger.error(f"Failed to load subcategory rules: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             cls._rules = {}
 
     @classmethod
@@ -94,26 +119,43 @@ class SubcategoryRules:
             email_thread: List of email messages in the thread, each containing 'subject' and 'body'
         """
         cls._load_rules()
-        templates = cls._rules.get(subcategory)
-        if not templates:
+        rules = cls._rules.get(subcategory, [])
+        if not rules:
             return None
 
-        prompt = f"""Pour la sous-catégorie '{subcategory}', voici les règles qui déterminent si le ticket est critique ou élevé :
+        # Create sections for P1 and P2 rules
+        p1_rules = [rule for rule in rules if rule.priority_level == "P1"]
+        p2_rules = [rule for rule in rules if rule.priority_level == "P2"]
+
+        prompt = f"""Pour la sous-catégorie '{subcategory}', voici les règles qui déterminent si le ticket est critique (P1) ou élevé (P2) :
 
 """
-        for i, template in enumerate(templates, 1):
-            prompt += f"""
-Règle {i}:
-Description: {template.description}
-Condition critique: {template.critical_condition}
-Condition normale: {template.elevated_condition}
+        # Add P1 rules (Critical)
+        if p1_rules:
+            prompt += """
+Règles CRITIQUES (P1) :
+"""
+            for i, rule in enumerate(p1_rules, 1):
+                prompt += f"""
+Règle {i} [P1]:
+Description: {rule.description}
+Affectation: {rule.affectation}
+
+"""
+
+        # Add P2 rules (Elevated)
+        if p2_rules:
+            prompt += """
+Règles ÉLEVÉES (P2) :
+"""
+            for i, rule in enumerate(p2_rules, 1):
+                prompt += f"""
+Règle {i} [P2]:
+Description: {rule.description}
+Affectation: {rule.affectation}
 
 """
         
-        print("************************************************")
-        print(prompt) 
-        print("************************************************")
-
         # Add email thread context if available
         if email_thread:
             prompt += """
@@ -125,22 +167,22 @@ Sujet: {email.get('subject', '')}
 Message: {email.get('body', '')}
 """
             prompt += """
-En tenant compte du contexte de la conversation ci-dessus, génère une question claire et concise qui permettra de déterminer si la condition critique ou normale s'applique.
+En tenant compte du contexte de la conversation ci-dessus, génère une question claire et concise qui permettra de déterminer si la condition critique (P1) ou normale (P2) s'applique.
 """
         else:
             prompt += """
-Génère une question claire et concise qui permettra de déterminer si la condition critique ou normale s'applique.
+Génère une question claire et concise qui permettra de déterminer si la condition critique (P1) ou normale (P2) s'applique.
 """
         
         prompt += """
-Les questions doivent être formulées de manière à obtenir des réponses claires qui permettront de classer le ticket comme critique ou normal.
+Les questions doivent être formulées de manière à obtenir des réponses claires qui permettront de classer le ticket comme critique (P1) ou normal (P2).
 Format de sortie attendu en JSON:
 {
     "questions": [
         {
             "question": "question text",
-            "critical_answers": ["liste des réponses indiquant une condition critique"],
-            "elevated_answers": ["liste des réponses indiquant une condition normale"]
+            "critical_answers": ["liste des réponses indiquant une condition critique (P1)"],
+            "elevated_answers": ["liste des réponses indiquant une condition normale (P2)"]
         }
     ]
 }
@@ -148,34 +190,54 @@ Format de sortie attendu en JSON:
         return prompt
 
     @classmethod
-    def get_team_for_subcategory(cls, subcategory: str) -> Optional[str]:
-        """Get the assigned team for a subcategory."""
+    def get_team_for_rule(cls, subcategory: str, rule_description: str) -> Optional[str]:
+        """Get the assigned team for a specific rule in a subcategory."""
         cls._load_rules()
-        templates = cls._rules.get(subcategory)
-        if templates and len(templates) > 0:
-            return templates[0].team
+        rules = cls._rules.get(subcategory, [])
+        
+        for rule in rules:
+            if rule.description == rule_description:
+                return rule.affectation
+                
         return None
 
     @classmethod
     def evaluate_priority_with_llm(cls, subcategory: str, email_content: str, llm_handler) -> Priority:
         """Evaluate priority using LLM based on email content and rules."""
         cls._load_rules()
-        templates = cls._rules.get(subcategory)
-        if not templates:
+        rules = cls._rules.get(subcategory, [])
+        if not rules:
             logger.warning(f"No rules found for subcategory: {subcategory}")
             return Priority.ELEVEE  # Default to elevated if no rules exist
 
+        # Sort rules by priority level
+        p1_rules = [rule for rule in rules if rule.priority_level == "P1"]
+        p2_rules = [rule for rule in rules if rule.priority_level == "P2"]
+
         # Create a prompt for the LLM
-        prompt = f"""Analysez le contenu de l'email suivant et déterminez si la situation est critique ou élevée en fonction des règles fournies.
+        prompt = f"""Analysez le contenu de l'email suivant et déterminez si la situation est CRITIQUE (P1) ou ELEVEE (P2) en fonction des règles fournies.
 
 Règles pour la sous-catégorie '{subcategory}':
 
 """
-        for template in templates:
-            prompt += f"""
-Description: {template.description}
-Condition critique: {template.critical_condition}
-Condition normale: {template.elevated_condition}
+        # Add P1 (Critical) rules
+        if p1_rules:
+            prompt += """
+Règles CRITIQUES (P1):
+"""
+            for i, rule in enumerate(p1_rules, 1):
+                prompt += f"""
+{i}. {rule.description} [Affectation: {rule.affectation}]
+"""
+
+        # Add P2 (Elevated) rules
+        if p2_rules:
+            prompt += """
+Règles ELEVÉES (P2):
+"""
+            for i, rule in enumerate(p2_rules, 1):
+                prompt += f"""
+{i}. {rule.description} [Affectation: {rule.affectation}]
 """
 
         prompt += f"""
@@ -183,11 +245,16 @@ Condition normale: {template.elevated_condition}
 Contenu de l'email:
 {email_content}
 
-Analysez le contenu de l'email et déterminez si la situation correspond à une condition critique ou normale.
+Analysez le contenu de l'email et déterminez si la situation correspond à une règle CRITIQUE (P1) ou ELEVEE (P2).
+Si une règle CRITIQUE (P1) s'applique, la priorité est CRITIQUE.
+Si aucune règle CRITIQUE (P1) ne s'applique mais qu'une règle ELEVEE (P2) s'applique, la priorité est ELEVEE.
+Si aucune règle ne s'applique clairement, la priorité par défaut est ELEVEE.
+
 Répondez au format JSON suivant:
 {{
     "priority": "CRITIQUE" ou "ELEVEE",
-    "reason": "Explication de la décision"
+    "reason": "Explication de la décision",
+    "matching_rule": "Description de la règle correspondante" 
 }}
 """
 
@@ -202,6 +269,7 @@ Répondez au format JSON suivant:
                 result = json.loads(response_content)
                 priority_text = result.get("priority", "").upper()
                 logger.info(f"Priority evaluation reason: {result.get('reason', 'No reason provided')}")
+                logger.info(f"Matching rule: {result.get('matching_rule', 'No matching rule specified')}")
                 
                 if priority_text == "CRITIQUE":
                     logger.info(f"Priority evaluated as CRITIQUE for subcategory: {subcategory}")
@@ -214,32 +282,4 @@ Répondez au format JSON suivant:
                 
         except Exception as e:
             logger.error(f"Failed to evaluate priority with LLM: {str(e)}")
-            return Priority.ELEVEE
-
-    @classmethod
-    def evaluate_priority(cls, subcategory: str, answers: Dict[str, str], llm_handler=None, email_content: str = None) -> Priority:
-        """Evaluate the priority based on answers to the rules."""
-        # If we have email content and LLM handler, use the LLM-based evaluation
-        if email_content and llm_handler:
-            return cls.evaluate_priority_with_llm(subcategory, email_content, llm_handler)
-            
-        # Fall back to the original rule-based evaluation
-        cls._load_rules()
-        templates = cls._rules.get(subcategory)
-        if not templates:
-            return Priority.ELEVEE  # Default to elevated if no rules exist
-
-        critical_count = 0
-        elevated_count = 0
-
-        for template in templates:
-            answer = answers.get(template.description, "").lower()
-            if answer in [a.lower() for a in template.critical_condition.split(",")]:
-                critical_count += 1
-            elif answer in [a.lower() for a in template.elevated_condition.split(",")]:
-                elevated_count += 1
-
-        # If any answer indicates critical, return critical
-        if critical_count > 0:
-            return Priority.CRITIQUE
-        return Priority.ELEVEE 
+            return Priority.ELEVEE 

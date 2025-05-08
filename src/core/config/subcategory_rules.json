@@ -1,65 +1,226 @@
 {
-    "GARES": [
+  "data_buisness_rules": {
+    "GARES_P1": [
       {
-        "description": "Coupure électrique toutes les gares (Grandes, moyennes et petites)",
-        "critical_condition": "Coupure électrique toutes les gares (Grandes, moyennes et petites) : Si la vente est impactée",
-        "elevated_condition": "Coupure électrique toutes les gares (Grandes, moyennes et petites) : Si la vente n'est pas impactée",
-        "team": "FM GARES"
+        "affectation": "FM GARES",
+        "rule": "Coupure électrique toutes les gares (Grandes, moyennes et petites) : Si la vente est impactée"
       },
       {
-        "description": "Fibre optique : Si la vente au niveau des gares est impactée ou le back up inwi est non opérationnel",
-        "critical_condition": "Fibre optique : Si la vente au niveau des gares est impactée ou le back up inwi est non opérationnel",
-        "elevated_condition": "Fibre optique : Si la vente au niveau des gares n'est pas impactée ou le back up inwi est opérationnel",
-        "team": "PC TELECOM"
+        "affectation": "PC TELECOM",
+        "rule": "Fibre optique : Si la vente au niveau des gares est impactée ou le back up inwi est non opérationnel"
       },
       {
-        "description": "Défaillance réseau : Si les gares sont impactées et le back up inwi est non opérationnel",
-        "critical_condition": "Défaillance réseau : Si les gares sont impactées et le back up inwi est non opérationnel",
-        "elevated_condition": "Défaillance réseau : Si les gares ne sont pas impactées ou le back up inwi est opérationnel",
-        "team": "PC TELECOM"
+        "affectation": "PC TELECOM",
+        "rule": "Défaillance réseau : Si les gares sont impactées et le back up inwi est non opérationnel"
       },
       {
-        "description": "Application de vente SIV est hors service",
-        "critical_condition": "Application de vente SIV est hors service",
-        "elevated_condition": "4 grandes gares réclament les lenteurs SIV",
-        "team": "SCV"
+        "affectation": "SCV",
+        "rule": "Application de vente SIV est hors service"
       },
       {
-        "description": "Poste (s) guichet (s) HS (si la gare dispose d'un seul poste) ou > 50%.",
-        "critical_condition": "Poste (s) guichet (s) HS (si la gare dispose d'un seul poste) ou > 50%.",
-        "elevated_condition": "",
-        "team": "MICRODATA PROXIMITE"
+        "affectation": "MICRODATA PROXIMITE",
+        "rule": "Poste (s) guichet (s) HS (si la gare dispose d'un seul poste) ou > 50%."
       },
       {
-        "description": "Imprimantes ISO hors service",
-        "critical_condition": " Plus de 50% des imprimantes ISO hors service",
-        "elevated_condition": "Moins de 50% des imprimantes ISO hors service",
-        "team": "CBI"
+        "affectation": "CBI",
+        "rule": "> 50 % des imprimantes ISO HS"
       },
       {
-        "description": "100% des TPE sont hors service",
-        "critical_condition": " 100% des TPE sont hors service dans toutes les gares",
-        "elevated_condition": "100% des TPE sont hors service dans une seule gare",
-        "team": "CMI"
+        "affectation": "CMI",
+        "rule": "100% des TPE HS dans toutes les gares (CMI)"
       },
       {
-        "description": "Panne générale des téléaffichages dans les gares",
-        "critical_condition": "Panne générale des téléaffichages dans les grandes gares",
-        "elevated_condition": "Panne générale des téléaffichages dans les petites et moyennes gares",
-        "team": "SOLARI"
+        "affectation": "SOLARI",
+        "rule": "Panne générale des téléaffichages dans les grandes gares (Voir la liste de catégorisation des gares)"
+      }
+    ],
+    "BÂTIMENT/DISTRICT_P1": [
+      {
+        "affectation": "PC TELECOM",
+        "rule": "Fibre optique (Si les utilisateurs sont impactés) = > 10 personnes"
       },
       {
-        "description": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
-        "critical_condition": "",
-        "elevated_condition": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
-        "team": "SCV"
+        "affectation": "SRV",
+        "rule": "Défaillance réseau = > 10 personnes"
       },
       {
-        "description": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
-        "critical_condition": "",
-        "elevated_condition": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI",
-        "team": "SCV"
+        "affectation": "FM SIEGE/CASA",
+        "rule": "Coupure électrique = > 10 personnes"
+      },
+      {
+        "affectation": "FM SIEGE/CASA",
+        "rule": "Température Datacenter Rabat & Casablanca (Hors pré-prod)"
+      },
+      {
+        "affectation": "CBI",
+        "rule": "Imprimante MFP = Panne d'impression Génerale"
+      },
+      {
+        "affectation": "GMAO MR, SRF,SFA, ADD,EUMATECH, SDC, SCC",
+        "rule": "Service SI en arrêt total --> GMAO MR, GMAO INFRA,  EBS-Oracle, PE, INFOLOG, MS OUTLOOK, GEOLOC, VPN, WALLIX ....."
+      }
+    ],
+    "ECOM/ONCF.MA/ONCF TRAFIC_P1": [
+      {
+        "affectation": "SCC",
+        "rule": "L'un de ces sites est non accessible"
+      },
+      {
+        "affectation": "CMI et/SCV",
+        "rule": "Problème de réception e-billets par les voyageurs"
+      },
+      {
+        "affectation": "CMI",
+        "rule": "Problème de paiement sur site"
+      },
+      {
+        "affectation": "SFA",
+        "rule": "Problème d'affichage de disponibilité"
+      },
+      {
+        "affectation": "SFA",
+        "rule": "Problème d'affichage des horaires"
+      }
+    ],
+    "CRC_P1": [
+      {
+        "affectation": "PCS GROUPE",
+        "rule": "Problème d'émission/réception d'appel OMNIO"
+      },
+      {
+        "affectation": "PC TELECOM",
+        "rule": "Problème de réception des appels depuis un opérateur défini 'IAM, ORANGE ou INWI'"
+      },
+      {
+        "affectation": "PCS GROUPE",
+        "rule": "Arrêt de service 2255"
+      }
+    ],
+    "CCR_P1": [
+      {
+        "affectation": "INDRA et/ou STI",
+        "rule": "Arrêt/blocage de l'application DAVINCI"
+      },
+      {
+        "affectation": "INDRA et/ou STI",
+        "rule": "Mise à jour de la composition type (déclarée par GCMV)"
+      },
+      {
+        "affectation": "STI",
+        "rule": "Renseignement / mise à jour de la composition réelle (2H avant le départ du train)"
+      },
+      {
+        "affectation": "MICRODATA PROXIMITE",
+        "rule": "> 50 % des postes de régulation HS"
+      }
+    ],
+    "GARES_P2": [
+      {
+        "affectation": "FM GARES",
+        "rule": "Coupure électrique toutes les gares (Grandes, moyennes et petites) : Si la vente n'est pas impactée"
+      },
+      {
+        "affectation": "PC TELECOM",
+        "rule": "Fibre optique : Si la vente au niveau des gares n'est pas impactée ou back up inwi est opérationnel"
+      },
+      {
+        "affectation": "PC TELECOM",
+        "rule": "Défaillance réseau : Si les gares ne sont pas impactées ou le back up inwi est opérationnel"
+      },
+      {
+        "affectation": "SCV",
+        "rule": "Arrêt/Blocage géneral des applications métiers --> RTR / SAISIE MANUELLE / SYSCO / BI  ......"
+      },
+      {
+        "affectation": "SCV",
+        "rule": "= 4 grandes gares réclament les lenteurs SIV"
+      },
+      {
+        "affectation": "NCRM - SCV",
+        "rule": "100% des DAT HS = Arrêt total dans une seule grande gare"
+      },
+      {
+        "affectation": "CMI",
+        "rule": "100% des TPE HS dans une seule gare"
+      },
+      {
+        "affectation": "CBI",
+        "rule": "= 50 % des imprimantes ISO HS"
+      },
+      {
+        "affectation": "CBI - AURIBUS - PROXIMITE MICRODATA - SCV - DXC",
+        "rule": "Poste GVCA HS (Hardware/Software)"
+      },
+      {
+        "affectation": "CBI - AURIBUS",
+        "rule": "Imprimante GVCA HS (si la gare dispose d'une seule imprimante ou > 50%)."
+      },
+      {
+        "affectation": "PROXIMITE MICRODATA - SCV -DXC",
+        "rule": "= 50% postes guichets HS (Hardware & Software)"
+      },
+      {
+        "affectation": "PROXIMITE MICRODATA",
+        "rule": "1 seule imprimante des arrêtés de caisse"
+      },
+      {
+        "affectation": "SOLARI",
+        "rule": "Panne générale des téléaffichages dans les moyennes et petites gares ( Voir la liste de catégorisation des gares)"
+      },
+      {
+        "affectation": "SCV",
+        "rule": "> 4 trains dont leurs horaires sont décalés sur SIV"
+      },
+      {
+        "affectation": "STI -SCV",
+        "rule": "= ou > 2 trains inexistants, ne s'affichent pas sur SIV"
+      },
+      {
+        "affectation": "SRV",
+        "rule": "50% des caméras de la vidéosurveillance sont déconnectées ou hors service dans le même endroit"
+      }
+    ],
+    "BÂTIMENT/DISTRICT_P2": [
+      {
+        "affectation": "FM SIEGE/CASA",
+        "rule": "Température Datacenter Rabat & Casablanca (Pré-prod)"
+      },
+      {
+        "affectation": "SCV - PCS GROUPE",
+        "rule": "Alerte de saturation d'espace disque des serveurs ou panne disque"
+      },
+      {
+        "affectation": "CBI",
+        "rule": "Imprimante MFP = Incident SCAN ou COPIE"
+      },
+      {
+        "affectation": "PROXIMITE MICRODATA",
+        "rule": "Poste de travail qui dispose d'une app spécifique (le seul dispo)"
+      },
+      {
+        "affectation": "SCC",
+        "rule": "Sécurité --> Vulnérabilités (Proviennent de DGSSI)"
+      }
+    ],
+    "CRC_P2": [
+      {
+        "affectation": "PCS GROUPE",
+        "rule": "Bugs d'OMNIO : Appels blancs/Retard de tonalité/appels sans fiche client/blocage de qualification"
+      }
+    ],
+    "CCR_P2": [
+      {
+        "affectation": "INDRA et/ou STI",
+        "rule": "Anomalie des modules de DAVINCI : SGT / SGR / SGU"
+      },
+      {
+        "affectation": "INDRA et/ou STI",
+        "rule": "Renseignement / mise à jour de l'ordre de formation ( J-1)"
+      },
+      {
+        "affectation": "PROXIMITE MICRODATA",
+        "rule": "Poste de régulation < 50 %"
       }
     ]
   }
-  
+}

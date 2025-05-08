@@ -14,6 +14,8 @@ class Ticket:
         priority: str,
         description: str,
         subcategories: List[Dict],
+        final_subcategory: str = "",
+        affectation_team: str = "",
         email_data: Dict = None,
         status: str = "open",
         ticket_id: Optional[str] = None,
@@ -33,6 +35,8 @@ class Ticket:
         self.priority = priority
         self.description = description
         self.subcategories = subcategories
+        self.final_subcategory = final_subcategory
+        self.affectation_team = affectation_team
         self.email_data = email_data or {}
         self.status = status
         self.date_submitted = date_submitted or datetime.now()

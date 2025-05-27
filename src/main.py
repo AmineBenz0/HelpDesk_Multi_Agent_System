@@ -77,6 +77,8 @@ def run_email_monitor(email_service, workflow, provider='gmail'):
 def main():
     """Main entry point for the Helpdesk system."""
     logger.info("Starting Helpdesk Email Processing System")
+
+    time.sleep(10)
     
     try:
         # Get email provider from environment variable

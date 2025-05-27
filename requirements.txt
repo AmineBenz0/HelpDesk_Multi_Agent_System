@@ -16,3 +16,4 @@ elasticsearch==8.13.0
 msal
 msgraph-core==0.2.2
 requests
+streamlit-aggrid

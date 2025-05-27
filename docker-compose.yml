@@ -13,10 +13,25 @@ services:
     networks:
       - helpdesk_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      test: ["CMD", "curl", "-f", "http://helpdesk_elasticsearch:9200"]
       interval: 30s
       timeout: 10s
       retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: streamlit_app
+    env_file:
+      - .env          # put your STREAMLIT_* and other secrets here
+    ports:
+      - "8501:8501"   # map host 8501 → container 8501
+    volumes:
+      - ./:/app       # so you can code locally and see changes
+    command: ["python", "-m", "src.main"]
+    networks:
+      - helpdesk_network
 
 volumes:
   es_data:

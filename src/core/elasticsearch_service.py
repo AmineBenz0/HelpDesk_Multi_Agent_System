@@ -12,7 +12,7 @@ class ElasticsearchService:
     _client: Optional[Elasticsearch] = None
 
     def __init__(self, index: Optional[str] = None):
-        self.host = os.getenv('ES_HOST', 'http://localhost:9200')
+        self.host = os.getenv('ES_HOST', 'http://helpdesk_elasticsearch:9200')
         self.user = os.getenv('ES_USER', 'elastic')
         self.password = os.getenv('ES_PASS', 'changeme')
         self.index = index or os.getenv('ES_INDEX', 'tickets')
@@ -23,7 +23,7 @@ class ElasticsearchService:
         if cls._client is None:
             try:
                 cls._client = Elasticsearch(
-                    os.getenv('ES_HOST', 'http://localhost:9200'),
+                    os.getenv('ES_HOST', 'http://helpdesk_elasticsearch:9200'),
                     basic_auth=(os.getenv('ES_USER', 'elastic'), os.getenv('ES_PASS', 'changeme'))
                 )
                 logger.info("Elasticsearch client initialized.")

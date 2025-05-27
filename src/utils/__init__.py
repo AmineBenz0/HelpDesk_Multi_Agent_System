@@ -10,7 +10,6 @@ Includes:
 
 from .logger import logger, setup_logger
 from .prompts import get_email_classification_prompt, get_prompt, get_incident_subcategory_prompt
-from .document_parser import DocumentProcessor
 
 __all__ = [
     'logger',

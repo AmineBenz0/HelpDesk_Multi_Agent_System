@@ -88,10 +88,9 @@ class PriorityDetectionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved fallback temporary ticket after priority detection: {ticket_path}")
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved fallback temporary ticket after priority detection: {temp_ticket.ticket_id}")
                 output_state["temp_priority_ticket_id"] = temp_ticket.ticket_id
-                
             return output_state
         
         # Get rules for the subcategory
@@ -116,10 +115,9 @@ class PriorityDetectionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved fallback temporary ticket after priority detection: {ticket_path}")
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved fallback temporary ticket after priority detection: {temp_ticket.ticket_id}")
                 output_state["temp_priority_ticket_id"] = temp_ticket.ticket_id
-                
             return output_state
             
         # Create prompt for LLM
@@ -144,7 +142,6 @@ class PriorityDetectionAgent:
             
             # Create and save temporary ticket if ticket_manager is available
             if self.ticket_manager:
-                # Create temporary ticket with priority
                 temp_ticket = self.ticket_manager.create_temp_ticket(
                     stage="PRIORITY",
                     user=user,
@@ -158,14 +155,9 @@ class PriorityDetectionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                
-                # Save the temporary ticket to file - will overwrite previous temp files
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved temporary ticket after priority detection: {ticket_path}")
-                
-                # Add ticket_id to state for tracking
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved temporary ticket after priority detection: {temp_ticket.ticket_id}")
                 output_state["temp_priority_ticket_id"] = temp_ticket.ticket_id
-            
             return output_state
             
         except Exception as e:
@@ -193,10 +185,9 @@ class PriorityDetectionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved fallback temporary ticket after priority detection: {ticket_path}")
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved fallback temporary ticket after priority detection: {temp_ticket.ticket_id}")
                 output_state["temp_priority_ticket_id"] = temp_ticket.ticket_id
-                
             return output_state
 
     def _create_priority_detection_prompt(self, subcategory: str, rules: list, email_data: Dict[str, Any]) -> str:

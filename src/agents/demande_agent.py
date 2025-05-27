@@ -3,11 +3,12 @@ import base64
 from email.mime.text import MIMEText
 from typing import Dict, Any
 from src.utils.logger import logger
-from config.settings import settings
+from src.core.gmail_service import GmailService
+
 
 class DemandeAgent:
-    def __init__(self, gmail_sender):
-        self.gmail_sender = gmail_sender
+    def __init__(self, gmail_service: GmailService):
+        self.gmail_service = gmail_service
     
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process demande by sending acknowledgment email"""
@@ -37,7 +38,13 @@ class DemandeAgent:
         
         # Send email
         try:
-            success = self.gmail_sender.send_message(email_info["from"], email_info["subject"], response_text)
+            success = self.gmail_service.send_message(
+                to=email_info["from"],
+                subject=email_info["subject"],
+                body=response_text,
+                thread_id=thread_id,
+                message_id=email_info["message_id"]
+            )
             if success:
                 logger.info("Demande acknowledgment sent successfully")
                 return {**state, "status": "acknowledged"}
@@ -51,4 +58,11 @@ class DemandeAgent:
     def _generate_response(self, email_data: Dict[str, Any]) -> str:
         """Generate acknowledgment email text"""
         return f"""
-        \nMerci pour votre demande. Nous avons bien reçu votre requête concernant :\n    \"{email_data['subject']}\"\n        \nNotre équipe d'assistance va l'examiner et vous répondra dans un délai de 24 heures.\nVotre demande a été enregistrée sous le numéro de référence : {email_data['message_id']}\n\n    Cordialement,\n    L'équipe du support technique\n        """
+Merci pour votre demande. Nous avons bien reçu votre requête concernant :
+    \"{email_data['subject']}\"
+Notre équipe d'assistance va l'examiner et vous répondra dans un délai de 24 heures.
+Votre demande a été enregistrée sous le numéro de référence : {email_data['message_id']}
+
+Cordialement,
+L'équipe du support technique
+        """

@@ -5,11 +5,12 @@ from typing import Dict, Any
 from src.utils.logger import logger
 from src.utils.prompts import get_user_info_extraction_prompt
 from src.core.ticket_management import TicketManager
+from src.core.email_service import EmailService
 
 class FieldExtractionAgent:
-    def __init__(self, llm_handler, gmail_service, ticket_manager: TicketManager = None):
+    def __init__(self, llm_handler, email_service: EmailService, ticket_manager: TicketManager = None):
         self.llm_handler = llm_handler
-        self.service = gmail_service
+        self.email_service = email_service
         self.ticket_manager = ticket_manager
 
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -79,12 +80,8 @@ class FieldExtractionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                
-                # Save the temporary ticket to file - will overwrite based on thread_id
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved temporary ticket after field extraction: {ticket_path}")
-                
-                # Add ticket_id to state for tracking
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved temporary ticket after field extraction: {temp_ticket.ticket_id}")
                 outgoing_state["temp_ticket_id"] = temp_ticket.ticket_id
             
             return outgoing_state
@@ -120,8 +117,8 @@ class FieldExtractionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved fallback temporary ticket after field extraction: {ticket_path}")
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved fallback temporary ticket after field extraction: {temp_ticket.ticket_id}")
                 fallback_state["temp_ticket_id"] = temp_ticket.ticket_id
                 
             return fallback_state

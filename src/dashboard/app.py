@@ -16,153 +16,34 @@ import time
 from typing import Dict, List, Set, Optional
 import threading
 from src.core.ticket_management import TicketManager
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
 
 class Dashboard:
     def __init__(self):
         self.ticket_manager = TicketManager()
-        self.data_dir = Path("dashboard_data")
-        self.data_dir.mkdir(exist_ok=True)
-        self.known_tickets_file = self.data_dir / "known_tickets.pkl"
-        self.recent_activity_file = self.data_dir / "recent_activity.pkl"
-        self.tickets_dir = Path("tickets")
-        
+        # Remove file-based logic: no data_dir, known_tickets_file, recent_activity_file
         # Initialize session state
         if 'last_update' not in st.session_state:
-            st.session_state.last_update = datetime.now() - timedelta(minutes=5)  # Check last 5 minutes initially
-        
-        # Load known tickets from file if exists
+            st.session_state.last_update = datetime.now() - timedelta(minutes=5)
         if 'known_tickets' not in st.session_state:
-            st.session_state.known_tickets = self.load_known_tickets()
-            
-        # Load recent activity from file if exists
+            st.session_state.known_tickets = set()
         if 'recent_activity' not in st.session_state:
-            st.session_state.recent_activity = self.load_recent_activity()
-            
-        # Initialize selected ticket
+            st.session_state.recent_activity = []
         if 'selected_ticket' not in st.session_state:
             st.session_state.selected_ticket = None
-            
         self.update_interval = 5  # seconds
-        
-        # Load tickets from filesystem when initializing
-        self.load_tickets_from_filesystem()
-
-    def load_tickets_from_filesystem(self):
-        """Load tickets from the filesystem into the ticket manager."""
-        # Clear any existing tickets to prevent duplicates
-        self.ticket_manager.tickets = {}
-        
-        # Get all years, months, days directories
-        for year_dir in self.tickets_dir.glob('*'):
-            if not year_dir.is_dir() or not year_dir.name.isdigit():
-                continue
-                
-            for month_dir in year_dir.glob('*'):
-                if not month_dir.is_dir() or not month_dir.name.isdigit():
-                    continue
-                    
-                for day_dir in month_dir.glob('*'):
-                    if not day_dir.is_dir() or not day_dir.name.isdigit():
-                        continue
-                    
-                    # Get all ticket files in this day folder (including temp files)
-                    for ticket_file in day_dir.glob('*.json'):
-                        # Include all JSON files - no longer skipping temporary tickets
-                        try:
-                            with open(ticket_file, 'r', encoding='utf-8') as f:
-                                ticket_data = json.load(f)
-                                
-                            # Add is_temp flag based on filename if not already in data
-                            if '_TEMP' in ticket_file.name and 'is_temp' not in ticket_data:
-                                ticket_data['is_temp'] = True
-                                
-                            # Convert string dates to datetime objects
-                            if 'date_submitted' in ticket_data and isinstance(ticket_data['date_submitted'], str):
-                                try:
-                                    ticket_data['date_submitted'] = datetime.fromisoformat(
-                                        ticket_data['date_submitted'].replace('Z', '+00:00')
-                                    )
-                                except:
-                                    ticket_data['date_submitted'] = datetime.now()
-                                    
-                            if 'date_resolved' in ticket_data and ticket_data['date_resolved'] and isinstance(ticket_data['date_resolved'], str):
-                                try:
-                                    ticket_data['date_resolved'] = datetime.fromisoformat(
-                                        ticket_data['date_resolved'].replace('Z', '+00:00')
-                                    )
-                                except:
-                                    ticket_data['date_resolved'] = None
-                                    
-                            # Create a Ticket object and add it to the ticket manager
-                            ticket_id = ticket_data.get('ticket_id')
-                            if ticket_id:
-                                self.ticket_manager.tickets[ticket_id] = ticket_data
-                                
-                        except Exception as e:
-                            st.error(f"Error loading ticket from {ticket_file}: {str(e)}")
-
-    def load_known_tickets(self) -> Set[str]:
-        """Load known tickets from disk."""
-        try:
-            if self.known_tickets_file.exists():
-                with open(self.known_tickets_file, 'rb') as f:
-                    return pickle.load(f)
-            return set()
-        except Exception as e:
-            st.error("Error loading known tickets: {}".format(str(e)))
-            return set()
-
-    def save_known_tickets(self, known_tickets: Set[str]) -> None:
-        """Save known tickets to disk."""
-        try:
-            with open(self.known_tickets_file, 'wb') as f:
-                pickle.dump(known_tickets, f)
-        except Exception as e:
-            st.error("Error saving known tickets: {}".format(str(e)))
-            
-    def load_recent_activity(self) -> List[Dict]:
-        """Load recent activity from disk."""
-        try:
-            if self.recent_activity_file.exists():
-                with open(self.recent_activity_file, 'rb') as f:
-                    return pickle.load(f)
-            return []
-        except Exception as e:
-            st.error("Error loading recent activity: {}".format(str(e)))
-            return []
-
-    def save_recent_activity(self, recent_activity: List[Dict]) -> None:
-        """Save recent activity to disk."""
-        try:
-            with open(self.recent_activity_file, 'wb') as f:
-                pickle.dump(recent_activity, f)
-        except Exception as e:
-            st.error("Error saving recent activity: {}".format(str(e)))
 
     def get_tickets_dataframe(self) -> pd.DataFrame:
-        """Convert tickets to a pandas DataFrame for display."""
         tickets = self.ticket_manager.get_all_tickets()
         data = []
-        
         for ticket_id, ticket_data in tickets.items():
-            # Handle both dictionary and Ticket object formats
             if hasattr(ticket_data, 'to_dict'):
-                # If it's a Ticket object
                 ticket = ticket_data
                 user_name = ticket.user.get('name', 'Unknown') if isinstance(ticket.user, dict) else 'Unknown'
                 user_location = ticket.user.get('location', '') if isinstance(ticket.user, dict) else ''
-                
-                # Get subcategory info
                 final_subcategory = ticket.final_subcategory if hasattr(ticket, 'final_subcategory') else ""
-                
-                # Get affectation team
                 affectation_team = ticket.affectation_team if hasattr(ticket, 'affectation_team') else ""
-                
-                # Check if it's a temporary ticket
                 is_temp = ticket.is_temp if hasattr(ticket, 'is_temp') else False
                 temp_stage = ticket.stage if hasattr(ticket, 'stage') and is_temp else ""
-                
                 data.append({
                     'Ticket ID': ticket.ticket_id,
                     'Type': ticket.ticket_type,
@@ -179,22 +60,13 @@ class Dashboard:
                     'Thread ID': ticket.thread_id or ''
                 })
             else:
-                # If it's a dictionary
                 user = ticket_data.get('user', {})
                 user_name = user.get('name', 'Unknown') if isinstance(user, dict) else 'Unknown'
                 user_location = user.get('location', '') if isinstance(user, dict) else ''
-                
-                # Get subcategory info
                 final_subcategory = ticket_data.get('final_subcategory', "")
-                
-                # Get affectation team
                 affectation_team = ticket_data.get('affectation_team', "")
-                
-                # Check if it's a temporary ticket
                 is_temp = ticket_data.get('is_temp', False)
                 temp_stage = ticket_data.get('stage', "") if is_temp else ""
-                
-                # Get date fields
                 date_submitted = ticket_data.get('date_submitted')
                 if isinstance(date_submitted, str):
                     date_str = date_submitted
@@ -202,7 +74,6 @@ class Dashboard:
                     date_str = date_submitted.strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     date_str = str(date_submitted)
-                    
                 date_resolved = ticket_data.get('date_resolved')
                 if date_resolved:
                     if isinstance(date_resolved, str):
@@ -213,7 +84,6 @@ class Dashboard:
                         resolved_str = str(date_resolved)
                 else:
                     resolved_str = 'N/A'
-                
                 data.append({
                     'Ticket ID': ticket_id,
                     'Type': ticket_data.get('ticket_type', 'Unknown'),
@@ -229,17 +99,13 @@ class Dashboard:
                     'Location': user_location,
                     'Thread ID': ticket_data.get('thread_id', '')
                 })
-        
-        # Create the DataFrame and convert dates to datetime for proper sorting
         df = pd.DataFrame(data)
         if not df.empty:
-            # Try to convert Submitted At to datetime if it's a string
             if 'Submitted At' in df.columns and df['Submitted At'].dtype == 'object':
                 try:
                     df['Submitted At'] = pd.to_datetime(df['Submitted At'], errors='coerce')
                 except:
                     pass
-                    
         return df
 
     def select_ticket(self, ticket_id):
@@ -382,19 +248,11 @@ class Dashboard:
                         st.write("- {}".format(note))
 
     def check_for_new_tickets(self) -> List[Dict]:
-        """Check for new tickets since last update."""
-        # First reload tickets from filesystem to get any new ones
-        self.load_tickets_from_filesystem()
-        
+        # Remove self.load_tickets_from_filesystem()
         new_tickets = []
         tickets = self.ticket_manager.get_all_tickets()
-        
-        # Get current ticket IDs
         current_ticket_ids = set(tickets.keys())
-        
-        # Find new tickets (not in known_tickets)
         new_ticket_ids = current_ticket_ids - st.session_state.known_tickets
-        
         for ticket_id in new_ticket_ids:
             ticket_data = tickets[ticket_id]
             
@@ -426,7 +284,7 @@ class Dashboard:
                 elif hasattr(date_submitted, 'strftime'):
                     submitted_at = date_submitted.strftime('%Y-%m-%d %H:%M:%S')
                 else:
-                    submitted_at = str(date_submitted) if date_submitted else 'Unknown'
+                    submitted_at = str(date_submitted)
             
             # Trim description if too long
             if len(description) > 100:
@@ -442,18 +300,10 @@ class Dashboard:
                 'temp_stage': temp_stage,
                 'affectation_team': affectation_team
             })
-        
-        # Update known tickets
         st.session_state.known_tickets = current_ticket_ids
-        # Save known tickets to file for persistence between runs
-        self.save_known_tickets(current_ticket_ids)
         st.session_state.last_update = datetime.now()
-        
-        # If we found new tickets, update the recent activity
         if new_tickets:
             st.session_state.recent_activity = new_tickets
-            self.save_recent_activity(new_tickets)
-        
         return new_tickets
 
     def run(self):
@@ -472,10 +322,17 @@ class Dashboard:
         st.sidebar.subheader("Date Filter")
         
         # Reload tickets from filesystem to get fresh data
-        self.load_tickets_from_filesystem()
+        # Remove self.load_tickets_from_filesystem()
         
         # Get min and max dates from tickets
         df = self.get_tickets_dataframe()
+        filter_by_date = False
+        start_date = None
+        end_date = None
+        min_date = None
+        max_date = None
+        date_filter_active = False
+        
         if not df.empty:
             # Convert string dates to datetime objects if needed
             if df['Submitted At'].dtype != 'datetime64[ns]':
@@ -483,30 +340,68 @@ class Dashboard:
                     df['Submitted At'] = pd.to_datetime(df['Submitted At'], errors='coerce')
                 except:
                     pass
-                
             if not df['Submitted At'].isnull().all():
                 min_date = df['Submitted At'].min().date()
                 max_date = df['Submitted At'].max().date()
                 
-                # Set default to last 7 days or full range if shorter
-                default_start = max(min_date, (datetime.now() - timedelta(days=7)).date())
+                # Sidebar toggle for date filtering
+                filter_by_date = st.sidebar.checkbox("Filter by date range", value=False)
                 
-                # Date inputs
-                start_date = st.sidebar.date_input(
-                    "From", 
-                    value=default_start,
-                    min_value=min_date,
-                    max_value=max_date
-                )
-                
-                end_date = st.sidebar.date_input(
-                    "To",
-                    value=max_date,
-                    min_value=min_date,
-                    max_value=max_date
-                )
-                
-                # Add a separator
+                if filter_by_date:
+                    # Quick presets
+                    preset = st.sidebar.radio(
+                        "Quick presets",
+                        options=["All time", "Last 7 days", "Last 30 days", "This month", "Custom"],
+                        index=0,
+                        horizontal=True
+                    )
+                    # Set default range based on preset
+                    if preset == "All time":
+                        start_date = min_date
+                        end_date = max_date
+                    elif preset == "Last 7 days":
+                        start_date = max(min_date, (max_date - timedelta(days=6)))
+                        end_date = max_date
+                    elif preset == "Last 30 days":
+                        start_date = max(min_date, (max_date - timedelta(days=29)))
+                        end_date = max_date
+                    elif preset == "This month":
+                        start_date = max(min_date, max_date.replace(day=1))
+                        end_date = max_date
+                    else:  # Custom
+                        start_date = min_date
+                        end_date = max_date
+                    # If only one date is available
+                    if min_date == max_date:
+                        st.sidebar.info(f"Only tickets from {min_date.strftime('%Y-%m-%d')} are available")
+                        start_date = min_date
+                        end_date = max_date
+                    elif preset == "Custom":
+                        start_date = st.sidebar.date_input(
+                            "From",
+                            value=start_date,
+                            min_value=min_date,
+                            max_value=max_date,
+                            key="date_from"
+                        )
+                        end_date = st.sidebar.date_input(
+                            "To",
+                            value=end_date,
+                            min_value=min_date,
+                            max_value=max_date,
+                            key="date_to"
+                        )
+                        # Ensure valid range
+                        if start_date > end_date:
+                            st.sidebar.warning("Start date cannot be after end date. Resetting to full range.")
+                            start_date = min_date
+                            end_date = max_date
+                    date_filter_active = True
+                else:
+                    # Show all tickets
+                    start_date = min_date
+                    end_date = max_date
+                    date_filter_active = False
                 st.sidebar.markdown("---")
             else:
                 st.sidebar.warning("No valid dates found in tickets")
@@ -548,14 +443,10 @@ class Dashboard:
         if st.sidebar.button("Reset Notifications"):
             st.session_state.known_tickets = set()
             st.session_state.recent_activity = []
-            self.save_known_tickets(set())
-            self.save_recent_activity([])
             st.rerun()
 
         # Add a refresh button
         if st.sidebar.button("Refresh Dashboard"):
-            # Force reload tickets from filesystem
-            self.load_tickets_from_filesystem()
             st.rerun()
 
         # Create main layout with two columns
@@ -631,19 +522,22 @@ class Dashboard:
             st.subheader("Ticket History")
             df = self.get_tickets_dataframe()
             
-            # Apply date filter if we have tickets and the date filter has been set
-            if not df.empty and 'start_date' in locals() and 'end_date' in locals():
-                # Convert string dates to datetime for filtering if needed
-                if df['Submitted At'].dtype != 'datetime64[ns]':
-                    try:
-                        df['Submitted At'] = pd.to_datetime(df['Submitted At'], errors='coerce')
-                    except:
-                        pass
-                
-                # Filter by date range
-                if not df['Submitted At'].isnull().all():
-                    mask = (df['Submitted At'].dt.date >= start_date) & (df['Submitted At'].dt.date <= end_date)
-                    df = df[mask]
+            # Apply date filter if enabled
+            if not df.empty and start_date and end_date and (not filter_by_date or date_filter_active):
+                if filter_by_date and date_filter_active:
+                    # Convert string dates to datetime for filtering if needed
+                    if df['Submitted At'].dtype != 'datetime64[ns]':
+                        try:
+                            df['Submitted At'] = pd.to_datetime(df['Submitted At'], errors='coerce')
+                        except:
+                            pass
+                    # Filter by date range
+                    if not df['Submitted At'].isnull().all():
+                        mask = (df['Submitted At'].dt.date >= start_date) & (df['Submitted At'].dt.date <= end_date)
+                        df = df[mask]
+                # Show date range indicator if filter is active and not all time
+                if filter_by_date and date_filter_active and (start_date != min_date or end_date != max_date):
+                    st.caption(f"Filtered by date: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
             
             # Apply other filters
             if ticket_type and 'Type' in df.columns:

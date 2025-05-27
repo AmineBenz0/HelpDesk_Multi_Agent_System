@@ -4,6 +4,10 @@ import os
 import time
 import threading
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file in the project root
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 # Add project root to Python path
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -15,12 +19,14 @@ import subprocess
 import time
 from typing import TypedDict
 from langgraph.graph import StateGraph
+from src.core.email_service import EmailService
 from src.core.gmail_service import GmailService
-from src.core.gmail_sender import GmailSender
+from src.core.outlook_service import OutlookService
 from src.core.llm_handler import LLMHandler
 from src.core.ticket_management import TicketManager
 from src.core.workflow import create_workflow
 from src.monitoring.gmail_monitor import GmailMonitor
+from src.monitoring.outlook_monitor import OutlookMonitor
 from src.utils.logger import logger
 from src.agents.classification_agent import ClassifierAgent
 from src.agents.demande_agent import DemandeAgent
@@ -46,13 +52,25 @@ def run_dashboard():
     except Exception as e:
         logger.error(f"Dashboard error: {str(e)}")
 
-def run_email_monitor(gmail_service, workflow):
-    """Run the email monitor in a thread."""
+def run_email_monitor(email_service, workflow, provider='gmail'):
+    """Run the email monitor in a thread.
+    
+    Args:
+        email_service: Either GmailService or OutlookService instance
+        workflow: The workflow to process messages
+        provider: The email provider ('gmail' or 'outlook')
+    """
     try:
-        # Use the base GmailMonitor
-        monitor = GmailMonitor(gmail_service.service, workflow)
-        logger.info("Starting Gmail Monitor...")
-        monitor.start_monitoring()
+        if provider == 'gmail':
+            # For Gmail, pass the gmail_service.service to the monitor
+            monitor = GmailMonitor(email_service.service, workflow)
+            logger.info("Starting Gmail Monitor...")
+            monitor.start_monitoring()
+        else:
+            # For Outlook, use the email_service directly
+            monitor = OutlookMonitor(email_service, workflow)
+            logger.info("Starting Outlook Monitor...")
+            monitor.run()
     except Exception as e:
         logger.error(f"Email monitor error: {str(e)}")
 
@@ -61,26 +79,41 @@ def main():
     logger.info("Starting Helpdesk Email Processing System")
     
     try:
-        # Initialize services
-        gmail_service = GmailService()
-        gmail_sender = GmailSender(gmail_service.service)
+        # Get email provider from environment variable
+        email_provider = os.getenv('INBOX_PROVIDER', 'outlook').lower()
+        
+        if email_provider not in ['gmail', 'outlook']:
+            raise ValueError(f"Invalid INBOX_PROVIDER: {email_provider}. Must be 'gmail' or 'outlook'")
+            
+        logger.info(f"Using email provider: {email_provider}")
+        
+        # Check for required credentials if Outlook is selected
+        if email_provider == 'outlook':
+            required_vars = ['OUTLOOK_CLIENT_ID', 'OUTLOOK_CLIENT_SECRET', 'OUTLOOK_TENANT_ID']
+            missing_vars = [var for var in required_vars if not os.getenv(var)]
+                
+        # Initialize services based on provider
+        if email_provider == 'gmail':
+            email_service = GmailService()
+        else:
+            email_service = OutlookService()
         llm_handler = LLMHandler()
         ticket_manager = TicketManager()
 
-        # Initialize Agents
+        # Initialize Agents with provider-agnostic email_service
         classifier_agent = ClassifierAgent(llm_handler)
-        demande_agent = DemandeAgent(gmail_sender)
-        field_extraction_agent = FieldExtractionAgent(llm_handler, gmail_service, ticket_manager)
-        missing_fields_follow_up_agent = MissingFieldsFollowUpAgent(gmail_sender, llm_handler)
-        user_response_monitor = UserResponseMonitor(gmail_service.service, llm_handler)
+        demande_agent = DemandeAgent(email_service)
+        field_extraction_agent = FieldExtractionAgent(llm_handler, email_service, ticket_manager)
+        missing_fields_follow_up_agent = MissingFieldsFollowUpAgent(email_service, llm_handler)
+        user_response_monitor = UserResponseMonitor(email_service, llm_handler)
         subcategory_extraction_agent = SubcategoryExtractionAgent(llm_handler, ticket_manager)    
         priority_detection_agent = PriorityDetectionAgent(llm_handler, ticket_manager)
         ticket_creation_agent = TicketCreationAgent(ticket_manager)
-        confirm_subcategory_follow_up_agent = ConfirmSubcategoryFollowUpAgent(gmail_sender, llm_handler)
-        subcategory_response_monitor = SubcategoryResponseMonitor(gmail_service.service, llm_handler)
-        missing_subcategory_follow_up_agent = MissingSubcategoryFollowUpAgent(gmail_sender, llm_handler)
-        priority_follow_up_agent = PriorityFollowUpAgent(gmail_sender, llm_handler)
-        priority_response_monitor = PriorityResponseMonitor(gmail_service.service, llm_handler)
+        confirm_subcategory_follow_up_agent = ConfirmSubcategoryFollowUpAgent(email_service, llm_handler)
+        subcategory_response_monitor = SubcategoryResponseMonitor(email_service, llm_handler)
+        missing_subcategory_follow_up_agent = MissingSubcategoryFollowUpAgent(email_service, llm_handler)
+        priority_follow_up_agent = PriorityFollowUpAgent(email_service, llm_handler)
+        priority_response_monitor = PriorityResponseMonitor(email_service, llm_handler)
         
         # Create workflow
         workflow = create_workflow(
@@ -102,7 +135,7 @@ def main():
         # Start email monitor in a separate thread
         email_thread = threading.Thread(
             target=run_email_monitor,
-            args=(gmail_service, workflow),
+            args=(email_service, workflow, email_provider),
             daemon=True
         )
         email_thread.start()

@@ -1,8 +1,11 @@
 # src/utils/logger.py
 import logging
+import os
 from datetime import datetime
 from typing import Optional
-from config.settings import settings
+
+def str2bool(v):
+    return str(v).lower() in ("yes", "true", "t", "1")
 
 class ColoredFormatter(logging.Formatter):
     """Custom colored formatter for logs"""
@@ -23,7 +26,7 @@ class ColoredFormatter(logging.Formatter):
 def setup_logger(name: Optional[str] = None) -> logging.Logger:
     """Configure and return a logger instance."""
     logger = logging.getLogger(name or __name__)
-    logger.setLevel(logging.DEBUG if settings.DEBUG_MODE else logging.INFO)
+    logger.setLevel(logging.DEBUG if str2bool(os.getenv('DEBUG_MODE', 'True')) else logging.INFO)
     
     if not logger.handlers:
         ch = logging.StreamHandler()

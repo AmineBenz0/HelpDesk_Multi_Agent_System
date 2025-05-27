@@ -58,6 +58,7 @@ class EmailState(TypedDict):
     reason: str
     description: str
     affectation_team: str
+    temp_priority_ticket_id: str
 
 def create_workflow(
         classifier_agent: Any, 
@@ -175,7 +176,19 @@ def create_workflow(
     
     # Compile the workflow
     compiled_workflow = workflow.compile()
-    
+
+    # Attach a process_message method
+    def process_message(self, message_data):
+        from langgraph.errors import GraphRecursionError
+        try:
+            return self.invoke(message_data, config={"recursion_limit": 1000000})
+        except GraphRecursionError:
+            logger.warning("GraphRecursionError hit: restarting workflow from the beginning.")
+            # Retry once from the beginning
+            return self.invoke(message_data, config={"recursion_limit": 1000000})
+    import types
+    compiled_workflow.process_message = types.MethodType(process_message, compiled_workflow)
+
     logger.info("Workflow compilation complete")
     return compiled_workflow
 

@@ -46,39 +46,13 @@ class TicketCreationAgent:
                     final_subcategory = subcategories[0]
             logger.info(f"Set final_subcategory from subcategories: {final_subcategory}")
             
-        # Helper function to delete temporary ticket file if it exists
-        def delete_temp_file():
-            if not thread_id:
-                return
-                
-            # Get current date for constructing file path
-            date = datetime.now()
-            year = str(date.year)
-            month = f"{date.month:02d}"
-            day = f"{date.day:02d}"
-            
-            # Construct path to potential temporary file
-            base_dir = "tickets"
-            temp_filename = f"{thread_id}_TEMP.json"
-            temp_file_path = Path(base_dir) / year / month / day / temp_filename
-            
-            # Delete temporary file if it exists
-            if temp_file_path.exists():
-                try:
-                    logger.info(f"Deleting temporary ticket file: {temp_file_path}")
-                    temp_file_path.unlink()
-                except Exception as e:
-                    logger.warning(f"Failed to delete temporary ticket file {temp_file_path}: {str(e)}")
-        
         # Create the final ticket - will overwrite any existing temporary tickets
         # If we have a temporary priority ticket, finalize it
         # Otherwise create a new ticket
         if "temp_priority_ticket_id" in state:
             try:
-                # Try to finalize the temporary priority ticket
                 temp_ticket_id = state["temp_priority_ticket_id"]
                 logger.info(f"Finalizing temporary ticket {temp_ticket_id}")
-                
                 ticket = self.ticket_manager.finalize_temp_ticket(
                     temp_ticket_id,
                     user=user,
@@ -93,13 +67,8 @@ class TicketCreationAgent:
                 )
                 logger.info(f"Finalized temporary ticket to {ticket.ticket_id}")
             except Exception as e:
-                # If finalizing fails, create a new ticket
                 logger.error(f"Failed to finalize temporary ticket: {str(e)}")
                 logger.info("Creating new ticket instead")
-                
-                # Delete any existing temporary file
-                delete_temp_file()
-                
                 ticket = self.ticket_manager.create_ticket(
                     user=user,
                     ticket_type=ticket_type,
@@ -114,11 +83,6 @@ class TicketCreationAgent:
                 )
                 logger.info(f"Created new ticket {ticket.ticket_id}")
         else:
-            # Create a new ticket from scratch
-            
-            # Delete any existing temporary file
-            delete_temp_file()
-            
             ticket = self.ticket_manager.create_ticket(
                 user=user,
                 ticket_type=ticket_type,
@@ -133,10 +97,9 @@ class TicketCreationAgent:
             )
             logger.info(f"Created ticket {ticket.ticket_id}")
 
-        # Save ticket - this will overwrite any previous files with the same thread_id
-        ticket_path = ticket.save_to_file()
-        logger.info(f"Saved ticket {ticket.ticket_id} to {ticket_path}")
-        
+        # Save ticket to Elasticsearch only
+        ticket.save_to_elasticsearch()
+        logger.info(f"Saved ticket {ticket.ticket_id} to Elasticsearch")
         return {
             **state,
             "status": "incident_created",

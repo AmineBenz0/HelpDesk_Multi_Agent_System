@@ -2,15 +2,14 @@ import json
 from typing import Dict, Any
 from datetime import datetime
 from src.utils.logger import logger
-from src.core.gmail_sender import GmailSender
 from src.core.subcategory_rules import SubcategoryRules
-from src.utils.email_utils import send_follow_up_email
+from src.core.gmail_service import GmailService
 
 class PriorityFollowUpAgent:
     """Agent responsible for sending follow-up emails to clarify incident priority."""
     
-    def __init__(self, gmail_sender: GmailSender, llm_handler):
-        self.gmail_sender = gmail_sender
+    def __init__(self, gmail_service: GmailService, llm_handler):
+        self.gmail_service = gmail_service
         self.llm_handler = llm_handler
 
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,17 +62,19 @@ class PriorityFollowUpAgent:
         p1_rules = [rule for rule in rules if rule.priority_level == "P1"]
         p2_rules = [rule for rule in rules if rule.priority_level == "P2"]
         
+        # Extract user name for personalization
+        user_name = state.get("user", {}).get("name", "")
+        
         # Generate follow-up questions using LLM
-        prompt = self._create_follow_up_prompt(final_subcategory, p1_rules, p2_rules)
+        prompt = self._create_follow_up_prompt(final_subcategory, p1_rules, p2_rules, user_name)
         llm_response = self.llm_handler.get_response(prompt)
         result = self._parse_response(llm_response)
         
         # Send follow-up email
-        success = send_follow_up_email(
-            gmail_sender=self.gmail_sender,
+        success = self.gmail_service.send_message(
             to=sender,
             subject=result["subject"],
-            message_text=result["body"],
+            body=result["body"],
             thread_id=thread_id,
             message_id=message_id
         )
@@ -89,30 +90,26 @@ class PriorityFollowUpAgent:
             "status": "waiting_for_priority_clarification"
         }
 
-    def _create_follow_up_prompt(self, subcategory: str, p1_rules: list, p2_rules: list) -> str:
-        """Create a prompt for LLM to generate follow-up questions based on subcategory rules."""
-        prompt = f"""Tu es un assistant du service d'assistance technique chargé de demander des informations complémentaires aux utilisateurs.
-
-Objectif: Créer un email de suivi pour clarifier la priorité d'un incident lié à la sous-catégorie "{subcategory}".
-
-Les règles de priorité sont les suivantes:
-
-Règles CRITIQUES (P1):
-"""
+    def _create_follow_up_prompt(self, subcategory: str, p1_rules: list, p2_rules: list, user_name: str) -> str:
+        """Create a prompt for LLM to generate follow-up questions based on subcategory rules and user name."""
+        # Use only the first name if available
+        first_name = user_name.split()[0] if user_name else ""
+        greeting = f"Bonjour {first_name}," if first_name else "Bonjour," 
+        prompt = f"""Tu es un assistant du service d'assistance technique chargé de demander des informations complémentaires aux utilisateurs.\n\nObjectif: Créer un email de suivi pour clarifier la priorité d'un incident lié à la sous-catégorie \"{subcategory}\".\n\nLes règles de priorité sont les suivantes:\n\nRègles CRITIQUES (P1):\n"""
         # Add P1 rules
         for i, rule in enumerate(p1_rules, 1):
             prompt += f"{i}. {rule.description} [Affectation: {rule.affectation}]\n"
 
         prompt += "\nRègles ÉLEVÉES (P2):\n"
-        
         # Add P2 rules
         for i, rule in enumerate(p2_rules, 1):
             prompt += f"{i}. {rule.description} [Affectation: {rule.affectation}]\n"
 
-            prompt += f"""
+        prompt += f"""
 Crée un email de suivi poli et professionnel en français pour demander des précisions qui permettront de déterminer si l'incident correspond à une règle CRITIQUE (P1) ou ÉLEVÉE (P2).
 
-IMPORTANT: Pose MAXIMUM 3 questions, en sélectionnant uniquement les questions les plus pertinentes et discriminantes pour déterminer la priorité de l'incident dans la sous-catégorie "{subcategory}".
+IMPORTANT: Commence l'email par '{greeting}' (utilise le prénom si disponible, sinon écris simplement 'Bonjour,').
+IMPORTANT: Pose MAXIMUM 3 questions, en sélectionnant uniquement les questions les plus pertinentes et discriminantes pour déterminer la priorité de l'incident dans la sous-catégorie \"{subcategory}\".
 
 L'email doit :
 1. Être adressé au destinataire de manière professionnelle

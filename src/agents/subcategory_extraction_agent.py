@@ -86,12 +86,8 @@ class SubcategoryExtractionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                
-                # Save the temporary ticket to file - will overwrite previous temp file
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved temporary ticket after subcategory extraction: {ticket_path}")
-                
-                # Add ticket_id to state for tracking
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved temporary ticket after subcategory extraction: {temp_ticket.ticket_id}")
                 updated_state["temp_subcategory_ticket_id"] = temp_ticket.ticket_id
             
             return updated_state
@@ -114,8 +110,8 @@ class SubcategoryExtractionAgent:
                     thread_id=thread_id,
                     message_id=message_id
                 )
-                ticket_path = temp_ticket.save_to_file()
-                logger.info(f"Saved fallback temporary ticket after subcategory extraction: {ticket_path}")
+                temp_ticket.save_to_elasticsearch()
+                logger.info(f"Saved fallback temporary ticket after subcategory extraction: {temp_ticket.ticket_id}")
                 output_state["temp_subcategory_ticket_id"] = temp_ticket.ticket_id
                 
             return output_state

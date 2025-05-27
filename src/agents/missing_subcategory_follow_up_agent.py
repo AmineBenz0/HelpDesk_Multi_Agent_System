@@ -4,14 +4,13 @@ from typing import Dict, Any
 from datetime import datetime
 from src.utils.logger import logger
 from src.utils.prompts import get_missing_subcategory_follow_up_prompt
-from src.core.gmail_sender import GmailSender
-from src.utils.email_utils import send_follow_up_email
+from src.core.gmail_service import GmailService
 
 class MissingSubcategoryFollowUpAgent:
     """Agent responsible for sending follow-up emails for missing subcategory."""
     
-    def __init__(self, gmail_sender: GmailSender, llm_handler):
-        self.gmail_sender = gmail_sender
+    def __init__(self, gmail_service: GmailService, llm_handler):
+        self.gmail_service = gmail_service
         self.llm_handler = llm_handler
 
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -43,11 +42,10 @@ class MissingSubcategoryFollowUpAgent:
         result = self._parse_response(llm_response)
         
         # Send follow-up email
-        success = send_follow_up_email(
-            gmail_sender=self.gmail_sender,
+        success = self.gmail_service.send_message(
             to=sender,
             subject=result["subject"],
-            message_text=result["body"],
+            body=result["body"],
             thread_id=thread_id,
             message_id=message_id
         )
@@ -69,9 +67,6 @@ class MissingSubcategoryFollowUpAgent:
             content = response.content if hasattr(response, 'content') else str(response)
             content = content.replace('```json', '').replace('```', '').strip()
             return json.loads(content)
-        except json.JSONDecodeError as e:
+        except Exception as e:
             logger.error(f"Failed to parse LLM response: {str(e)}")
-            return {
-                "subject": "Précision de sous-catégorie requise",
-                "body": "Veuillez préciser la sous-catégorie appropriée pour votre incident."
-            } 
+            return {"subject": "Précision requise", "body": "Veuillez préciser la sous-catégorie appropriée."} 

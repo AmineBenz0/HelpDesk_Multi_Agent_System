@@ -52,9 +52,8 @@ EMAIL_PROMPTS = {
                         Sinon, analyse l'ensemble du fil.\n\n**Sous-catégories disponibles** :\n
                         - Gares : Problèmes liés aux gares\n
                         - Bâtiment/District : Problèmes liés aux bâtiments ou districts\n
-                        - ECOM : Problèmes liés au système ECOM\n
-                        - ONCF.MA : Problèmes liés au système ONCF.MA\n
-                        - ONCF TRAFIC : Problèmes liés au trafic\n
+                        - ECOM/ONCF.MA/ONCF TRAFIC : Problèmes liés au système ECOM\n
+                        - CRC : Problèmes liés au Centre de Régulation et de Contrôle\n
                         - CRC : Problèmes liés au Centre de Régulation et de Contrôle\n
                         - CCR : Problèmes liés au Centre de Contrôle Régional\n\n
         **Étapes à suivre** :\n

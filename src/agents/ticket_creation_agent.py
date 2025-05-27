@@ -21,34 +21,39 @@ class TicketCreationAgent:
         email_data = state["email_data"]
         ticket_type = state.get("ticket_type", "Incident")
         
-        # Log thread ID for persistence tracking
+        # Extract thread_id and message_id from email data
         thread_id = email_data.get("persistent_thread_id")
         if thread_id:
             logger.debug(f"Processing thread_id: {thread_id}")
         else:
             logger.warning("No persistent_thread_id found in email_data")
         
-        # If thread, use persistent_thread_id and first message's message_id
+        # Extract message_id from email data
         if "messages" in email_data:
-            thread_id = email_data.get("persistent_thread_id")
             message_id = email_data["messages"][0].get("message_id", None)
         else:
-            thread_id = email_data.get("persistent_thread_id")
             message_id = email_data.get("message_id", None)
         
-        # If no final_subcategory but we have subcategories, try to set it
+        # Set final_subcategory if not provided but subcategories exist
         if not final_subcategory and subcategories:
-            # Try to extract from subcategories
             if isinstance(subcategories, list) and subcategories:
                 if isinstance(subcategories[0], dict):
                     final_subcategory = subcategories[0].get("subcategory", "")
                 elif isinstance(subcategories[0], str):
                     final_subcategory = subcategories[0]
             logger.info(f"Set final_subcategory from subcategories: {final_subcategory}")
-            
-        # Create the final ticket - will overwrite any existing temporary tickets
-        # If we have a temporary priority ticket, finalize it
-        # Otherwise create a new ticket
+        
+        # Check if there are existing tickets for this thread
+        existing_tickets = []
+        if thread_id:
+            existing_tickets = self.ticket_manager.get_tickets_by_thread_id(thread_id, include_temp=False)
+            if existing_tickets:
+                logger.info(f"Found {len(existing_tickets)} existing tickets for thread {thread_id}")
+        
+        # Handle ticket creation or update
+        ticket = None
+        
+        # Finalize temporary ticket if it exists
         if "temp_priority_ticket_id" in state:
             try:
                 temp_ticket_id = state["temp_priority_ticket_id"]
@@ -69,20 +74,10 @@ class TicketCreationAgent:
             except Exception as e:
                 logger.error(f"Failed to finalize temporary ticket: {str(e)}")
                 logger.info("Creating new ticket instead")
-                ticket = self.ticket_manager.create_ticket(
-                    user=user,
-                    ticket_type=ticket_type,
-                    priority=priority,
-                    description=description,
-                    subcategories=subcategories,
-                    final_subcategory=final_subcategory,
-                    affectation_team=affectation_team,
-                    email_data=email_data,
-                    thread_id=thread_id,
-                    message_id=message_id
-                )
-                logger.info(f"Created new ticket {ticket.ticket_id}")
-        else:
+                # Fall through to create a new ticket
+        
+        # Create a new ticket if we couldn't finalize a temporary one
+        if ticket is None:
             ticket = self.ticket_manager.create_ticket(
                 user=user,
                 ticket_type=ticket_type,
@@ -95,11 +90,9 @@ class TicketCreationAgent:
                 thread_id=thread_id,
                 message_id=message_id
             )
-            logger.info(f"Created ticket {ticket.ticket_id}")
+            logger.info(f"Created new ticket {ticket.ticket_id}")
 
-        # Save ticket to Elasticsearch only
-        ticket.save_to_elasticsearch()
-        logger.info(f"Saved ticket {ticket.ticket_id} to Elasticsearch")
+        # Update state with the new ticket information
         return {
             **state,
             "status": "incident_created",

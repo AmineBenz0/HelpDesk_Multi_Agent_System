@@ -31,7 +31,7 @@ A sophisticated multi-agent system for automated email processing and helpdesk m
 - **Comprehensive Follow-Up System**
   - Specialized follow-up agents for different missing information types
   - User response monitoring and state tracking
-  - Smart thread management for ongoing conversations
+  - Intelligent thread management for ongoing conversations
   - Automatic state updates based on user responses
 
 - **Email Communication**
@@ -248,25 +248,36 @@ HelpDesk_Multi_Agent_System/
 
 ## 🎯 Ticket Handling
 
-### Ticket Creation Workflow
-- All tickets (temporary and final) are stored and managed in Elasticsearch.
-- Temporary tickets use the format `TEMP-STAGE-YYYYMMDD-XXXX`.
-- Final tickets use the format `TKT-YYYYMMDD-XXXX`.
-- Ticket IDs are generated and managed by the system in Elasticsearch.
-- No file-based ticket storage or counter is used.
+### Ticket IDs and Naming Convention
 
-### Priority and Affectation Rules
-- Enhanced rule structure with P1 (CRITIQUE) and P2 (ELEVEE) levels
-- Each rule includes description, priority level, and affectation team
-- Rules organized by subcategory for precise matching
-- Tickets automatically routed to appropriate teams based on content analysis
+The system uses a structured ticket ID format to improve tracking and organization:
 
-### Follow-up Process
-1. Missing information detected during any extraction stage
-2. Appropriate follow-up agent generates specific email
-3. Response monitor tracks user replies
-4. Ticket updated with new information from responses
-5. Processing continues from appropriate stage
+- **Regular tickets**: `TKT-YYYYMMDD-XXXXX` (for standard tickets)
+- **Thread-aware tickets**: `TKT-YYYYMMDD-HHHHHHH-XXXXX` (where HHHHHHH is derived from the thread ID)
+- **Temporary tickets**: `TEMP-STAGE-YYYYMMDD-HHHHHHH-XXXXX` (for in-progress tickets)
+
+Where:
+- `YYYYMMDD`: Date in year-month-day format
+- `XXXXX`: Sequential counter (persistent across system restarts)
+- `HHHHHHH`: Hash of the thread ID (when available)
+- `STAGE`: Processing stage for temporary tickets (e.g., "triage", "priority")
+
+### Ticket Workflow
+
+1. **Creation**: New emails create temporary tickets with a stage identifier
+2. **Processing**: Each agent may update the temporary ticket as it processes the email
+3. **Finalization**: Once all required information is gathered, the temporary ticket is finalized into a permanent ticket
+4. **Thread Tracking**: Subsequent emails in the same thread are linked to the original ticket
+
+### Testing Ticket Management
+
+The system includes a test script (`test_ticket_management.py`) to verify ticket handling functionality:
+
+```bash
+python test_ticket_management.py
+```
+
+This tests ticket ID generation, temporary ticket workflow, and thread-based ticket tracking.
 
 ## 📊 Dashboard
 

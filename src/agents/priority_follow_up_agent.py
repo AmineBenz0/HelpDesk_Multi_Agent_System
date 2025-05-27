@@ -55,7 +55,7 @@ class PriorityFollowUpAgent:
         # Get rules for the subcategory
         rules = SubcategoryRules.get_rules_for_subcategory(final_subcategory)
         if not rules:
-            logger.error(f"No rules found for subcategory: {final_subcategory}")
+            logger.warning(f"No rules found for subcategory: {final_subcategory}")
             return state
         
         # Parse rules into critical (P1) and elevated (P2) rules

@@ -25,10 +25,8 @@ ENV PYTHONPATH=/app
 
 # Set default environment variables
 ENV ES_HOST=http://helpdesk_elasticsearch:9200 \
-    ES_USER=elastic \
-    ES_PASS=changeme \
     ES_INDEX=tickets \
-    DEBUG_MODE=True \
+    DEBUG_MODE=False \
     POLL_INTERVAL_SECONDS=15
 
 # Health check

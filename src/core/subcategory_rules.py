@@ -119,6 +119,7 @@ class SubcategoryRules:
             email_thread: List of email messages in the thread, each containing 'subject' and 'body'
         """
         cls._load_rules()
+        #[e for e in cls._rules.keys() if e in subcategory]
         rules = cls._rules.get(subcategory, [])
         if not rules:
             return None
@@ -205,6 +206,7 @@ Format de sortie attendu en JSON:
     def evaluate_priority_with_llm(cls, subcategory: str, email_content: str, llm_handler) -> Priority:
         """Evaluate priority using LLM based on email content and rules."""
         cls._load_rules()
+        cls._rules.keys()
         rules = cls._rules.get(subcategory, [])
         if not rules:
             logger.warning(f"No rules found for subcategory: {subcategory}")

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from src.monitoring.gmail_monitor import GmailMonitor
 from src.utils.logger import logger
 from src.utils.email_utils import ensure_thread_persistence
+from src.core.gmail_service import GmailService
 
 class PriorityResponseMonitor(GmailMonitor):
     """Monitors a specific email thread for priority clarification responses."""
@@ -11,7 +12,7 @@ class PriorityResponseMonitor(GmailMonitor):
         """Initialize with Gmail service and LLM handler.
         
         Args:
-            service: Gmail API service instance
+            service: Gmail API service instance or GmailService instance
             llm_handler: LLM handler for processing responses
             poll_interval: How often to check for new messages (in seconds)
         """
@@ -28,8 +29,11 @@ class PriorityResponseMonitor(GmailMonitor):
             bool: True if a new response is found, False otherwise
         """
         try:
+            # Get the actual Gmail service object
+            gmail_service = self.service.service if hasattr(self.service, 'service') else self.service
+            
             # Get the thread details
-            thread = self.service.users().threads().get(
+            thread = gmail_service.users().threads().get(
                 userId='me',
                 id=self.thread_id,
                 format='full'
@@ -94,7 +98,10 @@ class PriorityResponseMonitor(GmailMonitor):
         if has_response:
             # Fetch the latest thread and update messages
             try:
-                thread = self.service.users().threads().get(
+                # Get the actual Gmail service object
+                gmail_service = self.service.service if hasattr(self.service, 'service') else self.service
+                
+                thread = gmail_service.users().threads().get(
                     userId='me',
                     id=thread_id,
                     format='full'

@@ -36,75 +36,107 @@ class ElasticsearchService:
         self._ensure_client()
         return self._client
 
-    def index_document(self, document: Dict[str, Any], doc_id: Optional[str] = None) -> str:
+    def index_document(self, document: Dict[str, Any], doc_id: Optional[str] = None, index: Optional[str] = None) -> str:
         """
         Index (create or update) a document in Elasticsearch.
         :param document: The document to index
         :param doc_id: Optional document ID
+        :param index: Optional index name to override the default
         :return: The document ID
         """
         try:
-            resp = self.client.index(index=self.index, id=doc_id, document=document)
-            logger.debug(f"Indexed document in {self.index}: {resp['_id']}")
+            target_index = index or self.index
+            resp = self.client.index(index=target_index, id=doc_id, document=document)
+            logger.debug(f"Indexed document in {target_index}: {resp['_id']}")
             return resp['_id']
         except Exception as e:
             logger.error(f"Error indexing document: {e}")
             raise
 
-    def get_document(self, doc_id: str) -> Optional[Dict[str, Any]]:
+    def get_document(self, doc_id: str, index: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Retrieve a document by ID from Elasticsearch.
         :param doc_id: The document ID
+        :param index: Optional index name to override the default
         :return: The document as a dict, or None if not found
         """
         try:
-            resp = self.client.get(index=self.index, id=doc_id)
+            target_index = index or self.index
+            resp = self.client.get(index=target_index, id=doc_id)
             return resp['_source']
         except NotFoundError:
-            logger.warning(f"Document {doc_id} not found in {self.index}.")
+            logger.warning(f"Document {doc_id} not found in {target_index}.")
             return None
         except Exception as e:
             logger.error(f"Error retrieving document {doc_id}: {e}")
             raise
 
-    def search_documents(self, query: Dict[str, Any], size: int = 1000) -> List[Dict[str, Any]]:
+    def search_documents(self, query: Dict[str, Any], size: int = 1000, index: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Search for documents in Elasticsearch.
         :param query: The Elasticsearch query DSL
         :param size: Max number of results
+        :param index: Optional index name to override the default
         :return: List of document sources
         """
         try:
-            resp = self.client.search(index=self.index, body={"query": query}, size=size)
+            target_index = index or self.index
+            resp = self.client.search(index=target_index, body={"query": query}, size=size)
             hits = resp.get('hits', {}).get('hits', [])
             return [hit['_source'] for hit in hits]
         except Exception as e:
+            target_index = index or self.index
             if hasattr(e, 'status_code') and e.status_code == 404 and 'index_not_found_exception' in str(e):
-                logger.info(f"No index [{self.index}] found in Elasticsearch. Returning empty result.")
+                logger.info(f"No index [{target_index}] found in Elasticsearch. Returning empty result.")
             else:
                 logger.error(f"Error searching documents: {e}")
             raise
 
-    def delete_document(self, doc_id: str) -> bool:
+    def delete_document(self, doc_id: str, index: Optional[str] = None) -> bool:
         """
         Delete a document by ID from Elasticsearch.
         :param doc_id: The document ID
+        :param index: Optional index name to override the default
         :return: True if deleted, False if not found
         """
         try:
-            self.client.delete(index=self.index, id=doc_id)
-            logger.debug(f"Deleted document {doc_id} from {self.index}.")
+            target_index = index or self.index
+            self.client.delete(index=target_index, id=doc_id)
+            logger.debug(f"Deleted document {doc_id} from {target_index}.")
             return True
         except NotFoundError:
-            logger.warning(f"Document {doc_id} not found for deletion in {self.index}.")
+            target_index = index or self.index
+            logger.warning(f"Document {doc_id} not found for deletion in {target_index}.")
             return False
         except Exception as e:
             logger.error(f"Error deleting document {doc_id}: {e}")
             raise
 
-    def delete_all_documents(self):
+    def delete_all_documents(self, index: Optional[str] = None):
         """
         Delete all documents in the index.
+        :param index: Optional index name to override the default
         """
-        self.client.delete_by_query(index=self.index, body={"query": {"match_all": {}}})
-        logger.info(f"Deleted all documents from {self.index}") 
+        target_index = index or self.index
+        self.client.delete_by_query(index=target_index, body={"query": {"match_all": {}}})
+        logger.info(f"Deleted all documents from {target_index}")
+        
+    def create_index_if_not_exists(self, index: Optional[str] = None, mappings: Optional[Dict] = None):
+        """
+        Create an index if it doesn't exist.
+        :param index: Optional index name to override the default
+        :param mappings: Optional mappings for the index
+        """
+        target_index = index or self.index
+        try:
+            if not self.client.indices.exists(index=target_index):
+                body = {}
+                if mappings:
+                    body["mappings"] = mappings
+                self.client.indices.create(index=target_index, body=body)
+                logger.info(f"Created index {target_index}")
+            else:
+                logger.debug(f"Index {target_index} already exists")
+        except Exception as e:
+            logger.error(f"Error creating index {target_index}: {e}")
+            raise 

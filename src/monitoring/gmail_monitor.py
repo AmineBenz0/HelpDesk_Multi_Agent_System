@@ -30,6 +30,7 @@ class GmailMonitor:
         self.poll_interval = poll_interval if poll_interval is not None else int(os.getenv('POLL_INTERVAL_SECONDS', 15))
         self.running = False
         self.monitoring_thread = None
+        self.recently_processed_threads = set()  # Track processed thread IDs in memory
         
     def start_monitoring(self):
         """Start monitoring the inbox for new messages."""
@@ -64,11 +65,20 @@ class GmailMonitor:
             if not thread:
                 logger.debug("No new unread threads found")
                 return
-                
-            logger.info(f"New unread thread found with ID: {thread['id']}")
+            
+            thread_id = thread['id']
+            # Prevent double-processing in the same session
+            if thread_id in self.recently_processed_threads:
+                logger.debug(f"Thread {thread_id} already processed in this session, skipping.")
+                return
+            
+            logger.info(f"New unread thread found with ID: {thread_id}")
             
             # Extract the message data
             message_data = self._extract_message_data(thread)
+            
+            # Mark as processed in this session
+            self.recently_processed_threads.add(thread_id)
             
             # Process the message through the workflow
             if self.workflow:

@@ -3,12 +3,12 @@ import base64
 from email.mime.text import MIMEText
 from typing import Dict, Any
 from src.utils.logger import logger
-from src.core.gmail_service import GmailService
+from src.core.email_service import EmailService
 
 
 class DemandeAgent:
-    def __init__(self, gmail_service: GmailService):
-        self.gmail_service = gmail_service
+    def __init__(self, email_service: EmailService):
+        self.email_service = email_service
     
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process demande by sending acknowledgment email"""
@@ -38,7 +38,7 @@ class DemandeAgent:
         
         # Send email
         try:
-            success = self.gmail_service.send_message(
+            success = self.email_service.send_message(
                 to=email_info["from"],
                 subject=email_info["subject"],
                 body=response_text,

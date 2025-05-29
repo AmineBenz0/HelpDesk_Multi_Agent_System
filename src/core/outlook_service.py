@@ -42,12 +42,12 @@ class OutlookService(EmailService):
             self._get_token()
         return {
             'Authorization': f'Bearer {self.access_token}',
+            'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
 
     def send_message(self, to: str, subject: str, body: str, cc: Optional[list] = None, thread_id: Optional[str] = None, message_id: Optional[str] = None) -> bool:
-        user_id = self.username
-        endpoint = f"{self.GRAPH_API_BASE}/users/{user_id}/sendMail"
+        endpoint = f"{self.GRAPH_API_BASE}/me/sendMail"
         message = {
             "message": {
                 "subject": subject,
@@ -65,10 +65,13 @@ class OutlookService(EmailService):
                 {"emailAddress": {"address": email}} for email in cc
             ]
         try:
-            response = requests.post(endpoint, headers=self._headers(), data=json.dumps(message))
-            response.raise_for_status()
-            logger.info(f"Email sent successfully to {to}")
-            return True
+            response = requests.post(endpoint, headers=self._headers(), json=message)
+            if response.status_code in (200, 202):
+                logger.info(f"Email sent successfully to {to}")
+                return True
+            else:
+                logger.error(f"Failed to send email: {response.text}")
+                return False
         except Exception as e:
             logger.error(f"Error sending email to {to}: {str(e)}")
             if hasattr(e, 'response') and e.response is not None:
@@ -76,8 +79,7 @@ class OutlookService(EmailService):
             return False
 
     def get_thread_messages(self, thread_id: str) -> List[Dict[str, Any]]:
-        user_id = self.username
-        endpoint = f"{self.GRAPH_API_BASE}/users/{user_id}/messages"
+        endpoint = f"{self.GRAPH_API_BASE}/me/messages"
         params = {
             "$filter": f"conversationId eq '{thread_id}'",
             "$orderby": "receivedDateTime asc"
@@ -104,8 +106,7 @@ class OutlookService(EmailService):
             return []
 
     def reply_to_message(self, message_id: str, body: str, html_content: bool = True) -> bool:
-        user_id = self.username
-        endpoint = f"{self.GRAPH_API_BASE}/users/{user_id}/messages/{message_id}/reply"
+        endpoint = f"{self.GRAPH_API_BASE}/me/messages/{message_id}/reply"
         reply = {
             "message": {
                 "body": {
@@ -115,10 +116,13 @@ class OutlookService(EmailService):
             }
         }
         try:
-            response = requests.post(endpoint, headers=self._headers(), data=json.dumps(reply))
-            response.raise_for_status()
-            logger.info(f"Reply sent successfully to message {message_id}")
-            return True
+            response = requests.post(endpoint, headers=self._headers(), json=reply)
+            if response.status_code in (200, 202):
+                logger.info(f"Reply sent successfully to message {message_id}")
+                return True
+            else:
+                logger.error(f"Failed to send reply: {response.text}")
+                return False
         except Exception as e:
             logger.error(f"Error sending reply to message {message_id}: {str(e)}")
             if hasattr(e, 'response') and e.response is not None:
@@ -126,27 +130,15 @@ class OutlookService(EmailService):
             return False
 
     def list_messages(self, top=10, filter_query=None):
-        logger.debug(f"[list_messages] Called with top={top}, filter_query={filter_query}")
         try:
-            user_id = os.getenv("OUTLOOK_USER_ID")
-            logger.debug(f"[list_messages] OUTLOOK_USER_ID: {user_id}")
-            try:
-                endpoint = f"/users/{user_id}/messages"
-                logger.debug(f"[list_messages] Endpoint: {endpoint}")
-                query_params = {
-                    "$top": str(top),
-                    "$orderby": "receivedDateTime desc"
-                }
-                if filter_query:
-                    query_params["$filter"] = str(filter_query)
-                logger.debug(f"[list_messages] Query params: {query_params}")
-                query_string = urlencode(query_params)
-                url = f"{endpoint}?{query_string}"
-                logger.debug(f"[list_messages] Full URL: {url}")
-            except Exception as param_err:
-                logger.error(f"[list_messages] Error constructing parameters: {param_err}")
-                raise
-            response = self.service.get(url)
+            endpoint = f"{self.GRAPH_API_BASE}/me/mailFolders/inbox/messages"
+            params = {
+                "$top": str(top),
+                "$orderby": "receivedDateTime desc"
+            }
+            if filter_query:
+                params["$filter"] = str(filter_query)
+            response = requests.get(endpoint, headers=self._headers(), params=params)
             response.raise_for_status()
             return response.json().get("value", [])
         except Exception as e:
@@ -154,19 +146,11 @@ class OutlookService(EmailService):
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"[list_messages] Response content: {e.response.content}")
             raise
-            
+
     def get_message(self, message_id):
-        logger.debug(f"[get_message] Called with message_id={message_id}")
         try:
-            user_id = os.getenv("OUTLOOK_USER_ID")
-            logger.debug(f"[get_message] OUTLOOK_USER_ID: {user_id}")
-            try:
-                endpoint = f"/users/{user_id}/messages/{message_id}"
-                logger.debug(f"[get_message] Endpoint: {endpoint}")
-            except Exception as param_err:
-                logger.error(f"[get_message] Error constructing endpoint: {param_err}")
-                raise
-            response = self.service.get(endpoint)
+            endpoint = f"{self.GRAPH_API_BASE}/me/messages/{message_id}"
+            response = requests.get(endpoint, headers=self._headers())
             response.raise_for_status()
             return response.json()
         except Exception as e:

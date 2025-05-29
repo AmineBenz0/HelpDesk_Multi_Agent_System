@@ -4,13 +4,13 @@ from typing import Dict, Any
 from datetime import datetime
 from src.utils.logger import logger
 from src.utils.prompts import get_missing_subcategory_follow_up_prompt
-from src.core.gmail_service import GmailService
+from src.core.email_service import EmailService
 
 class MissingSubcategoryFollowUpAgent:
     """Agent responsible for sending follow-up emails for missing subcategory."""
     
-    def __init__(self, gmail_service: GmailService, llm_handler):
-        self.gmail_service = gmail_service
+    def __init__(self, email_service: EmailService, llm_handler):
+        self.email_service = email_service
         self.llm_handler = llm_handler
 
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -42,7 +42,7 @@ class MissingSubcategoryFollowUpAgent:
         result = self._parse_response(llm_response)
         
         # Send follow-up email
-        success = self.gmail_service.send_message(
+        success = self.email_service.send_message(
             to=sender,
             subject=result["subject"],
             body=result["body"],

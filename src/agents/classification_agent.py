@@ -41,6 +41,14 @@ class ClassifierAgent:
         prompt = get_email_classification_prompt(sender, subject, body)
         llm_response = self.llm_handler.get_response(prompt)
         result = self._parse_response(llm_response)
+        print('#################################################')
+        print(f'{result=}')
+        print(f'{sender=}')
+        print(f'{subject=}')
+        print(f'{body=}')
+        print(f'{prompt=}')
+        print(f'{llm_response=}')
+        print('#################################################')
         return {
             **state,
             "category": result["category"],
@@ -57,7 +65,9 @@ class ClassifierAgent:
             logger.debug(f"Raw response: {content[:200]}")  # Log first 200 chars
             
             result = json.loads(content)
-            
+            print('#################################################')
+            print(f'{result=}')
+            print('#################################################')
             if "category" not in result:
                 raise ValueError("Missing required 'category' field")
             

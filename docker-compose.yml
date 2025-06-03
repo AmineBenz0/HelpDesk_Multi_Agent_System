@@ -21,15 +21,21 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.app
+      dockerfile: Dockerfile
     container_name: streamlit_app
+    entrypoint: ["/app/entrypoint.sh"]
     env_file:
       - .env          # put your STREAMLIT_* and other secrets here
+    environment:
+      # Point at the system CA bundle (now containing your two extra certs)
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+      # If you use requests, you can also set REQUESTS_CA_BUNDLE:
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
     ports:
       - "8501:8501"   # map host 8501 → container 8501
+      - "8000:8000"   
     volumes:
       - ./:/app       # so you can code locally and see changes
-    command: ["python", "-m", "src.main"]
     networks:
       - helpdesk_network
 

@@ -12,6 +12,23 @@ import json
 import re
 import os
 
+
+
+
+import requests
+
+GRAPH_URL = os.getenv("GRAPH_URL", "http://app:8000/process_email")
+
+def send_email_to_graph(email_payload: dict, graph_url=GRAPH_URL):
+    try:
+        response = requests.post(graph_url, json=email_payload)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": str(e)}
+
+
+
 class GmailMonitor:
     """Monitors Gmail inbox for new emails and processes them."""
     
@@ -83,7 +100,13 @@ class GmailMonitor:
             # Process the message through the workflow
             if self.workflow:
                 try:
-                    self.workflow.process_message({"email_data": message_data})
+                    # self.workflow.process_message({"email_data": message_data})
+                    print('#################################################')
+                    print(f'{GRAPH_URL=}')
+                    print(f'{message_data=}')
+                    print('#################################################')
+                    send_email_to_graph({"email_data": message_data}, GRAPH_URL)
+
                 except Exception as e:
                     logger.error(f"Error processing message through workflow: {str(e)}")
         except Exception as e:

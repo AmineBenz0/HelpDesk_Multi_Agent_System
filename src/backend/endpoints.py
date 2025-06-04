@@ -102,20 +102,20 @@ graph = create_workflow(
     )
 
 # ——— 2) Celery setup ———
-# celery_app = Celery(
-#     "helpdesk",
-#     broker="redis://redis:6379/0",
-#     backend="redis://redis:6379/0"
-# )
+celery_app = Celery(
+    "helpdesk",
+    broker="redis://redis:6379/0",
+    backend="redis://redis:6379/0"
+)
 
-# celery_app.conf.update(
-#     task_serializer='json',
-#     result_serializer='json',
-#     accept_content=['json'],
-#     worker_concurrency=4,
-# )
+celery_app.conf.update(
+    task_serializer='json',
+    result_serializer='json',
+    accept_content=['json'],
+    worker_concurrency=4,
+)
 
-# @celery_app.task(name="invoke_graph")
+@celery_app.task(name="invoke_graph")
 def invoke_graph(payload: dict):
     # return graph.invoke(payload)
     return graph.process_message(payload)
@@ -135,11 +135,11 @@ def process_email(email: EmailPayload):
     print('#################################################')
     print(f'{email=}')
     print('#################################################')
-    # task = invoke_graph.delay(email.dict())
-    payload = EmailPayload(email_data=email.email_data)
-    task = invoke_graph(payload)
-    # return {"status": "queued", "task_id": task.id}
-    return task
+    payload = EmailState(email_data=email.email_data)
+    task = invoke_graph.delay(payload)
+    # task = invoke_graph(payload)
+    return {"status": "queued", "task_id": task.id}
+    # return task
 
 @app.get("/tasks/{task_id}")
 def get_task_status(task_id: str):

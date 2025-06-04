@@ -1,4 +1,18 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - helpdesk_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 2s
+      retries: 5
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
     container_name: helpdesk_elasticsearch
@@ -31,6 +45,11 @@ services:
       - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
       # If you use requests, you can also set REQUESTS_CA_BUNDLE:
       - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
     ports:
       - "8501:8501"   # map host 8501 → container 8501
       - "8000:8000"   
@@ -38,6 +57,34 @@ services:
       - ./:/app       # so you can code locally and see changes
     networks:
       - helpdesk_network
+    restart: on-failure
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: langgraph_celery
+    entrypoint: []
+    command:
+      - celery
+      - -A
+      - src.backend.endpoints.celery_app
+      - worker
+      - --loglevel=info
+      - --concurrency=4
+    volumes:
+      - ./:/app        # remove in prod if not needed
+    environment:
+      SSL_CERT_FILE: "/etc/ssl/certs/ca-certificates.crt"
+      REQUESTS_CA_BUNDLE: "/etc/ssl/certs/ca-certificates.crt"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - helpdesk_network
+    restart: on-failure
 
 volumes:
   es_data:

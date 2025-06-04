@@ -103,9 +103,10 @@ class GmailMonitor:
                     # self.workflow.process_message({"email_data": message_data})
                     print('#################################################')
                     print(f'{GRAPH_URL=}')
-                    print(f'{message_data=}')
+                    print(f'BEFORE {message_data=}')
                     print('#################################################')
-                    send_email_to_graph({"email_data": message_data}, GRAPH_URL)
+                    task =send_email_to_graph({"email_data": message_data}, GRAPH_URL)
+                    print(f'launched task: {task}') 
 
                 except Exception as e:
                     logger.error(f"Error processing message through workflow: {str(e)}")

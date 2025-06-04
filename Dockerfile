@@ -6,7 +6,7 @@ WORKDIR /app
 
 # install system deps for build tools if needed
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc graphviz libgraphviz-dev && \
+    apt-get install -y --no-install-recommends gcc ca-certificates graphviz libgraphviz-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # copy only requirements first (for caching)

@@ -132,9 +132,6 @@ class EmailPayload(BaseModel):
 @app.post("/process_email")
 # def process_email(email: Payload):
 def process_email(email: EmailPayload):
-    print('#################################################')
-    print(f'{email=}')
-    print('#################################################')
     payload = EmailState(email_data=email.email_data)
     task = invoke_graph.delay(payload)
     # task = invoke_graph(payload)

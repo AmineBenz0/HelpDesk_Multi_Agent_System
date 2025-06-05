@@ -11,21 +11,16 @@ from bs4 import BeautifulSoup
 import json
 import re
 import os
-
-
-
-
 import requests
+
 
 GRAPH_URL = os.getenv("GRAPH_URL", "http://app:8000/process_email")
 
-def send_email_to_graph(email_payload: dict, graph_url=GRAPH_URL):
-    try:
-        response = requests.post(graph_url, json=email_payload)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        return {"error": str(e)}
+
+
+
+
+
 
 
 
@@ -67,6 +62,16 @@ class GmailMonitor:
                 logger.error(f"Error in Gmail monitor loop: {str(e)}")
                 # Wait a bit before retrying
                 time.sleep(5)
+
+
+    
+    def send_email_to_graph(self, email_payload: dict, graph_url=GRAPH_URL):
+        try:
+            response = requests.post(graph_url, json=email_payload)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            return {"error": str(e)}
                 
     def stop_monitoring(self):
         """Stop the monitoring loop."""
@@ -101,12 +106,7 @@ class GmailMonitor:
             if self.workflow:
                 try:
                     # self.workflow.process_message({"email_data": message_data})
-                    print('#################################################')
-                    print(f'{GRAPH_URL=}')
-                    print(f'BEFORE {message_data=}')
-                    print('#################################################')
-                    task =send_email_to_graph({"email_data": message_data}, GRAPH_URL)
-                    print(f'launched task: {task}') 
+                    task =self.send_email_to_graph({"email_data": message_data}, GRAPH_URL)
 
                 except Exception as e:
                     logger.error(f"Error processing message through workflow: {str(e)}")

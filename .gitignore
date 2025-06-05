@@ -9,3 +9,4 @@ src/core/__pycache__/
 src/monitoring/__pycache__/
 config/__pycache__/
 src/backend/__pycache__/
+certs/*.crt
